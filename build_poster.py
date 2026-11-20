@@ -38,8 +38,8 @@ PREVIEW_300 = Path("/tmp/news_v11_300.png")
 PREVIEW_512 = Path("/tmp/news_v11_512.png")
 CHROME = "/usr/bin/google-chrome"
 
-JPEG_QUALITIES = (90, 89, 88, 87)
-JPEG_MAX = 420 * 1000
+JPEG_QUALITIES = (89, 88, 87, 86, 85, 84)
+JPEG_MAX = 380 * 1000
 HARD_LIMIT = 1048576
 
 SERIF = "Liberation Serif, DejaVu Serif, Georgia, serif"
@@ -223,35 +223,55 @@ def palm(x, base, height, lean, colour, scale=1.0):
 # strong focal object, one unmistakable crimson/emerald callout and generous
 # padding so nothing clips at 300px.  Row 1 is 322x102; rows 2-3 are 190x58.
 
+def leader(cx, hair, tie):
+    """A dignified, featureless head-and-shoulders silhouette in a dark suit."""
+    skin = "#E2B68C"
+    b = path("M%s 82 Q%s 64 %s 61 L%s 61 Q%s 64 %s 82 Z" % (
+        n(cx - 24), n(cx - 23), n(cx - 10), n(cx + 10), n(cx + 23), n(cx + 24)), "#1C2433", "#0B1018", .8)
+    b += poly([(cx - 5.5, 61), (cx + 5.5, 61), (cx, 72)], "#F8F5EE")
+    b += poly([(cx - 1.7, 62.5), (cx + 1.7, 62.5), (cx + 2.4, 71), (cx, 74.5), (cx - 2.4, 71)], tie)
+    b += rect(cx - 3.2, 55, 6.4, 7, skin)
+    b += '<ellipse cx="%s" cy="50" rx="7.4" ry="8.8" fill="%s" stroke="#7A5234" stroke-width=".6"/>' % (n(cx), skin)
+    if hair == "swoop":
+        b += path("M%s 50 Q%s 39.5 %s 40.2 Q%s 40 %s 47.5 Q%s 42.6 %s 50 Z" % (
+            n(cx - 7.9), n(cx - 8.4), n(cx + 1), n(cx + 9.6), n(cx + 8.4), n(cx + 2.5), n(cx - 7.9)), "#E9C46A")
+    elif hair == "dark":
+        b += path("M%s 48.5 Q%s 40 %s 40.6 Q%s 40 %s 48.5 Q%s 43.4 %s 48.5 Z" % (
+            n(cx - 7.6), n(cx - 7.4), n(cx), n(cx + 7.4), n(cx + 7.6), n(cx), n(cx - 7.6)), "#16181C")
+    else:
+        for sgn in (-1, 1):
+            b += path("M%s 52 Q%s 44 %s 42.6 L%s 46.5 Z" % (
+                n(cx + sgn * 7.6), n(cx + sgn * 7.9), n(cx + sgn * 4.6), n(cx + sgn * 4.4)), "#BDAA8A")
+    return b
+
+
 def art_apec():
-    """Shenzhen: a bold summit table under three crisp flags and podium tags."""
+    """Shenzhen: three leader silhouettes before their flags at one summit table."""
     W, H = 322, 102
     d = ("<defs>"
          + lingrad("apSky", [("0", "#082743", "1"), (".55", "#14507E", "1"), ("1", "#2A7FAE", "1")])
-         + lingrad("apSea", [("0", "#1D6E92", "1"), ("1", "#0B3B55", "1")])
          + lingrad("apT", [("0", "#F8E9C8", "1"), ("1", "#D9BE8A", "1")])
          + fold_shade("FUF") + fold_shade("FCF") + fold_shade("FRF")
          + "</defs>")
-    b = d + rect(0, 0, W, 72, "url(#apSky)")
-    b += circle(280, 30, 17, "#FFD36B", extra=' fill-opacity=".28"')
-    b += circle(280, 30, 9, "#FFE7A0")
-    for x, w, h in ((0, 18, 14), (18, 12, 25), (30, 16, 18), (46, 10, 28), (56, 14, 20),
-                    (190, 16, 21), (206, 12, 29), (218, 16, 17), (238, 10, 24), (302, 12, 18)):
-        b += rect(x, 72 - h, w, h, "#082743", extra=' fill-opacity=".8"')
-    b += rect(0, 72, W, 8, "url(#apSea)")
-    for x, w in ((14, 22), (48, 14), (92, 30), (140, 18), (196, 24), (250, 16), (288, 20)):
-        b += rect(x, 74 + (x % 3), w, .9, "#FFFFFF", extra=' fill-opacity=".5"')
-    b += rect(0, 80, W, 22, "#E8D2A8")
-    b += poly([(30, 80), (292, 80), (306, 92), (16, 92)], "url(#apT)")
-    b += rect(16, 92, 290, 10, "#6E4A2C")
-    b += rect(24, 94, 274, 4, "#9A1B1F")
-    for px, fn, cid in ((57, flag_us, "FU"), (161, flag_cn, "FC"), (265, flag_ru, "FR")):
-        b += rect(px - 1, 18, 2, 58, "#D8C7A2")
-        b += circle(px, 17.5, 2.4, "#E8B84B", "#3A2A16", .5)
-        b += pole_flag(px, 18, 44, 28, fn, cid, 1.2)
+    b = d + rect(0, 0, W, 84, "url(#apSky)")
+    b += circle(213, 36, 13, "#FFD36B", extra=' fill-opacity=".25"')
+    b += circle(213, 36, 7, "#FFE7A0")
+    for x, w, h in ((0, 18, 16), (18, 12, 27), (96, 14, 22), (110, 10, 30), (192, 16, 21),
+                    (234, 12, 26), (300, 12, 19), (312, 10, 28)):
+        b += rect(x, 84 - h, w, h, "#082743", extra=' fill-opacity=".85"')
+    for cx, fn, cid in ((57, flag_us, "FU"), (161, flag_cn, "FC"), (265, flag_ru, "FR")):
+        b += rect(cx - 25, 21, 2, 62, "#D8C7A2")
+        b += circle(cx - 24, 20.5, 2.4, "#E8B84B", "#3A2A16", .5)
+        b += pole_flag(cx - 24, 21, 46, 26, fn, cid, 1.1)
+    for cx, hair, tie in ((57, "swoop", "#C8102E"), (161, "dark", "#7A1418"), (265, "thin", "#2B4C8C")):
+        b += leader(cx, hair, tie)
+    b += rect(0, 82, W, 20, "#E8D2A8")
+    b += poly([(22, 80), (300, 80), (314, 91), (8, 91)], "url(#apT)")
+    b += rect(8, 91, 306, 11, "#6E4A2C")
+    b += rect(16, 93.5, 290, 4, "#9A1B1F")
     for x, lab in ((57, "TRUMP"), (161, "XI"), (265, "PUTIN")):
-        b += rect(x - 29, 54, 58, 13, "#FDFBF6", 2, "#1A1F2B", .9)
-        b += t(x, 63.2, lab, 8.4, "#1A1F2B", 900, "middle", .9)
+        b += rect(x - 27, 78, 54, 12.5, "#FDFBF6", 2, "#1A1F2B", .9)
+        b += t(x, 87.4, lab, 8.4, "#1A1F2B", 900, "middle", .9)
     b += rect(0, 0, W, 17, "#9A1B1F")
     b += rect(0, 17, W, 1.6, "#E8B84B")
     b += t(9, 12, "APEC 2026 &#183; SHENZHEN", 8.4, "#FFFFFF", 900, "start", 1.0)
@@ -305,19 +325,19 @@ def art_icj():
 
 
 ANT_SERIES = [
-    (20, 83.0), (28, 83.0), (36, 99.0), (46, 104.2), (58, 102.6), (70, 108.4), (84, 110.2),
-    (96, 111.53), (108, 108.6), (122, 109.4), (134, 105.4), (148, 107.0), (160, 103.1),
-    (174, 104.8), (186, 101.4), (200, 103.0), (212, 99.6), (226, 101.2), (238, 98.4),
-    (250, 100.0), (262, 97.2), (274, 98.9), (286, 96.5), (296, 98.0), (304, 97.17),
+    (20, 83.0), (30, 83.0), (36, 111.5), (48, 109.6), (60, 110.4), (72, 107.8), (86, 108.9),
+    (98, 106.1), (110, 107.3), (124, 104.6), (136, 105.7), (150, 103.1), (162, 104.0),
+    (176, 101.6), (188, 102.7), (202, 100.4), (214, 101.2), (228, 99.1), (240, 100.0),
+    (252, 98.2), (264, 98.9), (276, 97.5), (288, 98.3), (297, 96.9), (304, 97.17),
 ]
 
 
 def art_anthropic():
-    """New York: a bold emerald trading terminal with a crisp round-trip chart."""
+    """New York: an emerald trading terminal - $83 IPO, $111.50 open, $97.17 close."""
     W, H = 322, 102
 
     def py(p):
-        return 90 - (p - 80) / (114 - 80) * 72
+        return 90 - (p - 80) / (118 - 80) * 72
 
     d = ("<defs>"
          + lingrad("anB", [("0", "#061A14", "1"), ("1", "#0C3325", "1")])
@@ -331,17 +351,13 @@ def art_anthropic():
     b += line(16, py(83), 306, py(83), "#F5C542", 1.2, "4 3", ' stroke-opacity=".9"')
     b += path(dl, "none", "#065F46", 4.0, ' stroke-linejoin="round" stroke-linecap="round"')
     b += path(dl, "none", "#6EE7B7", 2.2, ' stroke-linejoin="round" stroke-linecap="round"')
-    for x, p in ((20, 83), (96, 111.53), (304, 97.17)):
+    for x, p in ((20, 83), (36, 111.5), (304, 97.17)):
         b += circle(x, py(p), 4.4, "#052E22", "#6EE7B7", 1.8)
         b += circle(x, py(p), 1.8, "#D1FAE5")
-    b += t(16, 14, "ANT &#183; NASDAQ", 9.2, "#ECFDF5", 900, "start", 1.0)
-    b += t(16, 28, "+17% DAY ONE", 7.8, "#6EE7B7", 900, "start", .5)
-    b += t(102, 16, "$111.53", 8.2, "#D1FAE5", 900, "start", .3)
-    b += line(100, 18, 98, py(111.53) - 4, "#6EE7B7", .7)
-    b += t(18, 96, "$83", 8.2, "#FDE68A", 900, "start", .2)
-    b += line(24, 92, 23, py(83) + 4, "#F5C542", .8)
-    b += t(304, 72, "$97.17", 8.2, "#ECFDF5", 900, "end", .2)
-    b += line(302, 66, 304, py(97.17) + 5, "#6EE7B7", .8)
+    b += t(16, 12, "ANT &#183; NASDAQ", 9.2, "#ECFDF5", 900, "start", 1.0)
+    b += t(44, 24.5, "OPEN $111.50", 8.2, "#D1FAE5", 900, "start", .3)
+    b += t(24, 99, "IPO $83", 8.2, "#FDE68A", 900, "start", .2)
+    b += t(304, 73, "CLOSE $97.17 &#183; +17%", 8.2, "#ECFDF5", 900, "end", .2)
     b += rect(236, 2, 78, 32, "#047857", 2, "#D1FAE5", 1.0)
     b += t(275, 20, "$81BN", 12.4, "#FFFFFF", 900, "middle", -.2)
     b += t(275, 29.5, "RECORD IPO", 4.4, "#D1FAE5", 900, "middle", .7)
@@ -378,7 +394,7 @@ def art_cop():
     b += t(105, 27, "FOSSIL FUELS", 8.2, "#1A1F2B", 900, "start", .4)
     b += line(104, 28.4, 170, 28.4, "#9A1B1F", 2.6)
     b += t(105, 43, "35% BY 2035", 10.4, "#9A1B1F", 900, "start", -.2)
-    b += t(105, 52, "CLEAN ELECTRICITY", 4.6, "#2C313A", 700, "start", .5)
+    b += t(105, 52, "ELECTRICITY SHARE", 4.6, "#2C313A", 700, "start", .5)
     return svg(W, H, b)
 
 
@@ -556,24 +572,41 @@ def art_berlin():
 
 
 def art_kenya():
-    """Mrima Hill: bold emerald/terracotta ridges, a crystal and a $60BN+ estimate badge."""
+    """Mrima Hill: Kenyan flag, a mine headframe, a niobium crystal and a $60BN+ estimate badge."""
     W, H = 190, 58
     d = ("<defs>"
          + lingrad("knS", [("0", "#0F3B35", "1"), (".6", "#2F7D5B", "1"), ("1", "#E8B76B", "1")])
          + lingrad("knX", [("0", "#5EEAD4", "1"), ("1", "#0E7490", "1")])
          + "</defs>")
     b = d + rect(0, 0, W, H, "url(#knS)")
-    b += circle(168, 10, 6, "#FFE7A0", extra=' fill-opacity=".45"')
     b += path("M0 36 Q30 24 58 32 Q90 41 118 29 Q148 18 190 33 L190 58 L0 58 Z", "#3E8E5A")
     b += path("M0 43 Q36 33 72 41 Q108 50 144 37 Q168 30 190 40 L190 58 L0 58 Z", "#1F5E3C")
     b += path("M0 51 Q44 43 92 49 Q140 56 190 47 L190 58 L0 58 Z", "#B4552F")
     b += path("M0 55 Q44 48 92 53 Q140 58 190 52 L190 58 L0 58 Z", "#8A3A1C")
-    # crystal
-    b += poly([(52, 15), (68, 27), (62, 49), (44, 49), (36, 27)], "url(#knX)", "#062E38", 1.2)
-    b += poly([(52, 15), (52, 49), (44, 49), (36, 27)], "#99F6E4", "#062E38", .8)
-    b += poly([(52, 15), (68, 27), (52, 33)], "#22D3EE", "#062E38", .7)
-    b += line(52, 15, 52, 49, "#ECFEFF", 1.0, ' stroke-opacity=".9"')
-    b += poly([(76, 29), (86, 36), (82, 49), (72, 49), (68, 36)], "#0E7490", "#062E38", 1.0)
+    # Kenyan flag on a pole
+    b += rect(6, 21, 1.6, 33, "#E8DCC0")
+    fx, fy, fw = 8, 22, 32
+    for y0, hh, col in ((0, 5.6, "#111111"), (5.6, 1.0, "#FFFFFF"), (6.6, 5.8, "#BB0000"),
+                        (12.4, 1.0, "#FFFFFF"), (13.4, 5.6, "#006B3F")):
+        b += rect(fx, fy + y0, fw, hh, col)
+    b += rect(fx, fy, fw, 19, "none", 0, "#FDFBF6", .6)
+    b += line(fx + 11, fy + 2, fx + 21, fy + 17, "#FFFFFF", .9) + line(fx + 21, fy + 2, fx + 11, fy + 17, "#FFFFFF", .9)
+    b += '<ellipse cx="%s" cy="%s" rx="3.4" ry="7.2" fill="#BB0000" stroke="#111111" stroke-width=".9"/>' % (
+        n(fx + 16), n(fy + 9.5))
+    b += line(fx + 16, fy + 3.5, fx + 16, fy + 15.5, "#FFFFFF", .8)
+    # mine headframe
+    hx = 98
+    b += line(hx - 9, 46, hx, 14, "#1A1F2B", 2.0) + line(hx + 9, 46, hx, 14, "#1A1F2B", 2.0)
+    b += line(hx - 6.5, 37, hx + 6.5, 37, "#1A1F2B", 1.2) + line(hx - 4, 27, hx + 4, 27, "#1A1F2B", 1.2)
+    b += line(hx - 6.5, 37, hx + 4, 27, "#1A1F2B", .9) + line(hx + 6.5, 37, hx - 4, 27, "#1A1F2B", .9)
+    b += circle(hx, 14, 4.2, "none", "#1A1F2B", 1.6) + circle(hx, 14, 1.2, "#1A1F2B")
+    b += line(hx + 4, 14, hx + 16, 46, "#1A1F2B", .8)
+    b += rect(hx - 12, 45, 32, 4, "#1A1F2B", 1)
+    # niobium crystal
+    b += poly([(62, 17), (77, 28), (72, 49), (54, 49), (47, 28)], "url(#knX)", "#062E38", 1.2)
+    b += poly([(62, 17), (62, 49), (54, 49), (47, 28)], "#99F6E4", "#062E38", .8)
+    b += poly([(62, 17), (77, 28), (62, 33)], "#22D3EE", "#062E38", .7)
+    b += line(62, 17, 62, 49, "#ECFEFF", 1.0, ' stroke-opacity=".9"')
     b += rect(4, 4, 72, 13, "#0B2A26", 2, "#FDFBF6", .5)
     b += t(40, 13.6, "MRIMA HILL", 6.8, "#FDFBF6", 900, "middle", .9)
     b += rect(116, 4, 70, 30, "#9A1B1F", 2, "#FDFBF6", 1.0)
@@ -651,30 +684,37 @@ def art_seoul():
 
 
 def art_paris():
-    """Paris/IEA: a bold red-on-charcoal server-rack energy chart and a padded badge."""
+    """Paris/IEA: a gold Eiffel Tower beside five separated rising server-rack bars."""
     W, H = 190, 58
     d = ("<defs>"
          + lingrad("prS", [("0", "#12161C", "1"), ("1", "#2A303A", "1")])
          + lingrad("prBar", [("0", "#F05252", "1"), ("1", "#B91C1C", "1")])
+         + lingrad("prE", [("0", "#FDE68A", "1"), ("1", "#C99A2E", "1")])
          + "</defs>")
     b = d + rect(0, 0, W, H, "url(#prS)")
-    b += line(10, 50, 108, 50, "#C9D1D9", 1.4)
-    bars = ((14, 8), (32, 16), (50, 25), (68, 34), (86, 44))
-    for i, (x, h) in enumerate(bars):
+    # Eiffel Tower
+    b += path("M7 53 L15 33 L17.6 19 L19.4 6 L20.6 6 L22.4 19 L25 33 L33 53 L28.2 53 Q20 41 11.8 53 Z",
+              "url(#prE)", "#6B4E12", .6)
+    b += rect(19.2, 2.5, 1.6, 4, "#FDE68A")
+    b += rect(13, 32, 14, 2.4, "#FDE68A", .5, "#6B4E12", .5)
+    b += rect(16.4, 18.4, 7.2, 2, "#FDE68A", .5, "#6B4E12", .5)
+    b += line(15.6, 34.4, 22.6, 46, "#6B4E12", .5) + line(24.4, 34.4, 17.4, 46, "#6B4E12", .5)
+    b += line(18, 20.4, 21.6, 31.6, "#6B4E12", .45) + line(22, 20.4, 18.4, 31.6, "#6B4E12", .45)
+    b += line(40, 50, 114, 50, "#C9D1D9", 1.4)
+    bars = ((43, 8), (57, 16), (71, 25), (85, 34), (99, 44))
+    for x, h in bars:
         y = 50 - h
-        b += rect(x, y, 13, h, "url(#prBar)", 1, "#080B0F", 1.0)
-        b += rect(x, y, 13, 3.4, "#1A1F2B", 1)
+        b += rect(x, y, 11, h, "url(#prBar)", 1, "#080B0F", 1.0)
+        b += rect(x, y, 11, 3.2, "#1A1F2B", 1)
         for yy in range(y + 7, 49, 6):
-            b += line(x + 2, yy, x + 11, yy, "#F5C542", .7, ' stroke-opacity=".9"')
-        b += circle(x + 10.2, y + 5.2, .9, "#FDE68A")
-    b += path("M18 46 L34 38 L52 29 L70 20 L96 8", "none", "#F5C542", 1.8,
+            b += line(x + 2, yy, x + 9, yy, "#F5C542", .7, ' stroke-opacity=".9"')
+    b += path("M47 40 L61 32 L75 23 L89 14 L104 4.5", "none", "#F5C542", 1.6,
               ' stroke-linecap="round" stroke-dasharray="3 2"')
-    b += poly([(97, 7), (87, 8), (92, 15)], "#F5C542")
-    b += t(21, 56, "2026", 5.2, "#E5E7EB", 900, "middle", .3)
-    b += t(92, 56, "2030", 5.2, "#E5E7EB", 900, "middle", .3)
-    b += rect(114, 4, 72, 24, "#B91C1C", 2, "#FDFBF6", 1.1)
-    b += t(150, 20, "+70% CO&#8322;", 9.4, "#FFFFFF", 900, "middle", -.1)
-    b += t(150, 36, "IEA &#183; DATA CENTRES", 5.0, "#E5E7EB", 700, "middle", .4)
+    b += t(48.5, 56.4, "2026", 5.2, "#E5E7EB", 900, "middle", .3)
+    b += t(104.5, 56.4, "2030", 5.2, "#E5E7EB", 900, "middle", .3)
+    b += rect(118, 4, 68, 24, "#B91C1C", 2, "#FDFBF6", 1.1)
+    b += t(152, 20, "+70% CO&#8322;", 9.4, "#FFFFFF", 900, "middle", -.1)
+    b += t(152, 37, "IEA &#183; DATA CENTRES", 5.0, "#E5E7EB", 700, "middle", .4)
     return svg(W, H, b)
 
 
@@ -684,27 +724,27 @@ CARDS = [
     # row 1: three lead stories
     dict(n=1, reg="AP", place="SHENZHEN", beat="SUMMIT", art=art_apec, lon=114.06, lat=22.54, lead=True,
          h="Trump, Xi and Putin hold first <span style=\"white-space:nowrap\">three-way</span> summit",
-         p="First US&#8211;China&#8211;Russia trilateral at APEC issues a Declaration on Peace on nuclear "
-           "risk; Ukraine and Iran omitted.",
+         p="First US&#8211;China&#8211;Russia trilateral at APEC issues a four-point &#8216;Declaration Toward "
+           "Peace&#8217;: a nuclear war &#8216;must never be fought&#8217;.",
          src="BBC &#183; Guardian"),
     dict(n=2, reg="GL", place="THE HAGUE", beat="JUSTICE", art=art_icj, lon=4.30, lat=52.08, lead=True,
-         h="World Court convicts Myanmar of Rohingya genocide",
-         p="In a landmark 9&#8211;6 verdict, the ICJ becomes the first court to hold a state liable for "
-           "genocide, ordering reparations.",
+         h="World Court rules Myanmar committed Rohingya genocide",
+         p="In a 9&#8211;6 judgment the UN&#8217;s top court finds a state responsible for genocide for the "
+           "first time and orders redress.",
          src="BBC &#183; UN News"),
     dict(n=3, reg="AM", place="NEW YORK", beat="MARKETS", art=art_anthropic, lon=-74.0, lat=40.71, lead=True,
          h="Anthropic jumps 17% in record $81bn Nasdaq debut",
-         p="Priced at $83, ticker ANT peaks at $111.53 near a $2tn valuation before closing day one "
-           "at $97.17.",
+         p="Priced at $83, ticker ANT opens at $111.50, briefly valuing the firm above $2tn, and closes "
+           "day one at $97.17.",
          src="BBC &#183; ABC &#183; DW"),
     # row 2
     dict(n=4, reg="GL", place="ANTALYA", beat="CLIMATE", art=art_cop, lon=30.71, lat=36.90,
          h="COP31 draft drops fossil-fuel phase-out",
-         p="Second text strips fossil-fuel wording; 35% clean electricity by 2035.",
+         p="Revised text strips all phase-out wording; keeps a 35% electrification goal for 2035.",
          src="Reuters &#183; UN News"),
     dict(n=5, reg="AP", place="ODISHA", beat="STORM", art=art_cyclone, lon=84.90, lat=19.27,
          h="300,000 evacuated ahead of Cyclone Akvan",
-         p="India cancels 69 trains across coastal Odisha before Friday&#8217;s landfall.",
+         p="Railways cancel dozens of coastal trains ahead of Friday&#8217;s expected landfall.",
          src="TNIE &#183; DW"),
     dict(n=6, reg="EU", place="KYIV", beat="WAR", art=art_kyiv, lon=30.52, lat=50.45,
          h="Drone raid hits Dutch and Austrian embassies",
@@ -716,7 +756,7 @@ CARDS = [
          src="Reuters &#183; Al Jazeera"),
     dict(n=8, reg="GL", place="WORLDWIDE", pin="MIAMI", beat="GAMES", art=art_gta, lon=-80.19, lat=25.76,
          h="GTA VI unlocks globally to 99 Metascore",
-         p="After 13 years, launch beats Zelda&#8217;s record with $1.5bn+ in pre-sales.",
+         p="13 years after GTA V, it ties Ocarina of Time&#8217;s all-time high; trackers put pre-sales at $1.5bn+.",
          src="BBC &#183; Guardian"),
     # row 3
     dict(n=9, reg="EU", place="BERLIN", beat="DIPLOMACY", art=art_berlin, lon=13.40, lat=52.52,
@@ -748,19 +788,19 @@ DISPATCHES = [
     ("AF", "SOMALIA", "UAE envoy given 72 hours to leave.", "Al Jazeera"),
     ("AF", "PRETORIA", "Reserve Bank holds at 7.25% in 4&#8211;3 vote.", "IOL"),
     ("OC", "COOK IS.", "Cat-4 Cyclone Xavier lashes northern atolls.", "RNZ"),
-    ("OC", "WELLINGTON", "High Court: pay-equity law breached rights.", "RNZ"),
+    ("OC", "WELLINGTON", "Court: pay-equity law breached rights.", "RNZ"),
     ("OC", "CANBERRA", "Jobless rate hits five-year high of 4.9%.", "ABC"),
     ("AM", "WASHINGTON", "Senate sinks Iran war curb, 48&#8211;51.", "Guardian"),
     ("AM", "HAITI", "Police say raid killed 34 gang suspects.", "Al Jazeera"),
     ("AM", "CALIFORNIA", "AG Bonta subpoenas Nvidia on China.", "CA DOJ"),
     # 24-33, right column
     ("AM", "BOSTON", "Judge blocks HIV-fund curbs on trans care.", "Guardian"),
-    ("AM", "BOGOT&#193;", "Unions stage nationwide strike over tax bill.", "Al Jazeera"),
-    ("EU", "COPENHAGEN", "MPs ratify US&#8211;Greenland pact, 109&#8211;0.", "Guardian"),
+    ("AM", "BOGOT&#193;", "Unions strike nationwide over tax bill.", "Al Jazeera"),
+    ("EU", "COPENHAGEN", "MPs back US&#8211;Greenland pact, 109&#8211;0.", "Guardian"),
     ("EU", "BRUSSELS", "Commission confirms AI-driven cyberattack.", "Politico"),
     ("EU", "KERCH", "Ukraine strike halts Crimea bridge rail traffic.", "Kyiv Post"),
     ("AP", "S. KOREA", "551,864 sit Suneung; flights grounded.", "Korea Herald"),
-    ("AP", "PAKISTAN", "Bus&#8211;tanker fire kills 10 near Ormara.", "Arab News"),
+    ("ME", "HORMUZ", "Iran says two supertankers hit mines.", "Al-Monitor"),
     ("AP", "JAKARTA", "Asset-forfeiture law passes after 18 years.", "Kompas"),
     ("ME", "LEBANON", "Israel says it hit Hezbollah missile site.", "Times of Israel"),
     ("GL", "ATHLETICS", "Jepchirchir gets three-year EPO ban.", "AIU"),
@@ -1027,8 +1067,8 @@ def build_html():
         '<div class="kicker"><span class="kl">THE WORLD CANVAS &#183; ONE-PAGE EDITION</span>'
         '<span class="kr">%d STORIES &#183; 7 REGIONS &#183; ALL VERIFIED THU 19 NOV 2026</span></div>' % total
         + '<h1 class="masthead">Thursday, 19 November 2026</h1>'
-        '<div class="deck">Trump, Xi and Putin share one table at APEC &#183; World Court convicts '
-        'Myanmar of Rohingya genocide &#183; Record $81bn Anthropic IPO debuts</div>'
+        '<div class="deck">Trump, Xi and Putin share one table at APEC &#183; World Court rules Myanmar '
+        'committed Rohingya genocide &#183; Record $81bn Anthropic IPO debuts</div>'
         '<div class="mastrule"></div>'
         '<div class="regionbar">' + segs + '</div>'
         '<div class="stats">' + nums + '</div>'
