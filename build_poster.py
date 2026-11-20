@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
-"""Build the 1024x1024 visual broadsheet for Thursday 19 November 2026 (entry.png), v8.
+"""Build the 1024x1024 visual broadsheet for Thursday 19 November 2026 (entry.png), v9.
 
-Twenty stories, every one first reported on Thursday 19 November 2026: eight big
-illustrated features (three lead cards over five crisp cards, each with an original
-inline SVG scene), a Natural Earth locator with numbered pins 1-8, and twelve
-one-line dispatches (9-20) in a single spacious column. A one-line DATE CHECK and
-SOURCES bar names the adjacent Wednesday 18 stories that were left out on purpose.
+A classic archival editorial broadsheet: warm cream newsprint, a giant Title-Case
+serif masthead, an italic crimson deck, a seven-region balance bar, a parchment
+Day-in-Numbers strip, thirteen bright daylight editorial illustrations in three
+rows (3 + 5 + 5), a Natural Earth locator with numbered pins 1-13, and twenty
+numbered dispatches (14-33) in two balanced columns. A crimson-boxed DATE CHECK
+names the Wednesday and Friday stories that were deliberately left out.
 
 The page is rendered in headless Chromium at 1x and 2x device scale. The same
-pass runs a DOM geometry audit (exact size, no overflow, no wrapped one-line
-text, no clipped or overlapping cards, labels, SVG text or map badges, a 20/20
-story census and an ink-contrast floor) and the build fails on any issue. Text
-comes from whichever of the native 1x and the Lanczos-downsampled 2x render is
-sharper on the dispatch column; when 1x wins, the 2x Lanczos pixels are pasted
-into the nine integer-aligned illustration boxes. The page is encoded as a
-4:4:4 baseline JPEG.
+pass runs a strict DOM geometry audit (exact size, 33/33 story census, 13 map
+badges, exact region sums, no overflow, no overlaps, no clipped text, headline
+and summary line limits, positive dispatch slack, SVG ink inside every viewBox
+and an ink-contrast floor); the build fails on any issue. Text comes from native
+1x Playwright text; the 2x Lanczos pixels are pasted into all fourteen
+integer-aligned illustration and map boxes. The result is a 4:4:4 baseline JPEG.
 
 Build-time tooling only (Playwright + Pillow). The shipped runtime (main.py) is
-standard library only. Everything rendered is local: system Lato, inline SVG
-and the Natural Earth 1:110m land outline stored in world_land_110m.svgpath.
+standard library only. Everything rendered is local: system Liberation Serif /
+Lato, inline SVG and the Natural Earth 1:110m outline stored in
+world_land_110m.svgpath.
 """
 
 import io
@@ -29,26 +30,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 ENTRY = ROOT / "entry.png"
 WORLD_PATH = ROOT / "world_land_110m.svgpath"
-HTML_PATH = Path("/tmp/world_news_canvas_v8.html")
-RAW_1X = Path("/tmp/world_news_canvas_v8_1x.png")
-RAW_2X = Path("/tmp/world_news_canvas_v8_2x.png")
-PREVIEW_300 = Path("/tmp/news_v8_300.png")
-PREVIEW_512 = Path("/tmp/news_v8_512.png")
+HTML_PATH = Path("/tmp/world_news_canvas_v9.html")
+RAW_1X = Path("/tmp/world_news_canvas_v9_1x.png")
+RAW_2X = Path("/tmp/world_news_canvas_v9_2x.png")
+PREVIEW_300 = Path("/tmp/news_v9_300.png")
+PREVIEW_512 = Path("/tmp/news_v9_512.png")
 CHROME = "/usr/bin/google-chrome"
 
-JPEG_QUALITIES = (91, 90)
-JPEG_MAX = 440 * 1024
+JPEG_QUALITIES = (92, 91, 90)
+JPEG_MAX = 450 * 1024
 HARD_LIMIT = 1048576
 
-# key: (label, bright fill, dark ink)
+SERIF = "Liberation Serif, DejaVu Serif, Georgia, serif"
+SANS = "Lato, Liberation Sans, sans-serif"
+
+# key: (label, fill, ink) - muted archival region inks, used for chips and pins
 REGIONS = {
-    "EU": ("EUROPE", "#1D4ED8", "#1E40AF"),
-    "AM": ("AMERICAS", "#B91C1C", "#991B1B"),
-    "AP": ("ASIA-PACIFIC", "#7E22CE", "#6B21A8"),
-    "AF": ("AFRICA", "#B45309", "#92400E"),
-    "ME": ("MIDDLE EAST", "#0E7490", "#155E75"),
-    "OC": ("OCEANIA", "#BE185D", "#9D174D"),
-    "GL": ("GLOBAL/SCIENCE", "#15803D", "#166534"),
+    "EU": ("EUROPE", "#1F4E79", "#1B4467"),
+    "AM": ("AMERICAS", "#8C2F39", "#7A2730"),
+    "AP": ("ASIA-PACIFIC", "#5B3F80", "#4F366F"),
+    "AF": ("AFRICA", "#8A4A12", "#783F0F"),
+    "ME": ("MIDDLE EAST", "#12606F", "#0F5360"),
+    "OC": ("OCEANIA", "#8F2F55", "#7C2849"),
+    "GL": ("GLOBAL/SCIENCE", "#2A5F45", "#24523B"),
 }
 ORDER = ["AP", "AM", "EU", "ME", "AF", "OC", "GL"]
 
@@ -65,7 +69,7 @@ def svg(w, h, body, cls="art-svg"):
             'xmlns="http://www.w3.org/2000/svg">%s</svg>' % (cls, n(w), n(h), body))
 
 
-def t(x, y, s, size, fill, weight=900, anchor="start", ls=0.0, extra=""):
+def t(x, y, s, size, fill, weight=700, anchor="start", ls=0.0, extra=""):
     a = ' text-anchor="%s"' % anchor if anchor != "start" else ""
     return ('<text class="lbl" x="%s" y="%s"%s font-family="Lato" font-size="%s" '
             'font-weight="%s" letter-spacing="%s" fill="%s"%s>%s</text>'
@@ -118,10 +122,6 @@ def star_d(cx, cy, r, inner=0.42):
 
 
 # ------------------------------------------------------------ art helpers
-# Every scene is one inline SVG whose ids are prefixed per card (all SVGs share
-# the document's id namespace). Geometry stays inside the viewBox so the audit's
-# getBBox() check holds; glows are drawn with gradient-filled rects or filters,
-# which never enlarge the geometric bounding box.
 
 def radgrad(gid, stops, cx, cy, r, user=True):
     s = "".join('<stop offset="%s" stop-color="%s" stop-opacity="%s"/>' % (o, c, a) for o, c, a in stops)
@@ -130,27 +130,18 @@ def radgrad(gid, stops, cx, cy, r, user=True):
             % (gid, n(cx), n(cy), n(r), units, s))
 
 
-def lingrad_a(gid, stops, x1="0", y1="0", x2="0", y2="1"):
+def lingrad(gid, stops, x1="0", y1="0", x2="0", y2="1"):
     s = "".join('<stop offset="%s" stop-color="%s" stop-opacity="%s"/>' % (o, c, a) for o, c, a in stops)
     return ('<linearGradient id="%s" x1="%s" y1="%s" x2="%s" y2="%s">%s</linearGradient>'
             % (gid, x1, y1, x2, y2, s))
 
 
-def glow_filter(fid, sd, color, strength=1):
-    merge = "".join('<feMergeNode in="g"/>' for _ in range(strength))
-    return ('<filter id="%s" x="-40%%" y="-40%%" width="180%%" height="180%%">'
-            '<feGaussianBlur in="SourceAlpha" stdDeviation="%s" result="b"/>'
-            '<feFlood flood-color="%s"/><feComposite in2="b" operator="in" result="g"/>'
-            '<feMerge>%s<feMergeNode in="SourceGraphic"/></feMerge></filter>' % (fid, n(sd), color, merge))
-
-
-def blur_filter(fid, sd):
-    return ('<filter id="%s" x="-30%%" y="-30%%" width="160%%" height="160%%">'
-            '<feGaussianBlur stdDeviation="%s"/></filter>' % (fid, n(sd)))
+def fold_shade(gid):
+    return lingrad(gid, [("0", "#FFFFFF", ".30"), (".28", "#000000", ".14"), (".52", "#FFFFFF", ".22"),
+                         (".78", "#000000", ".10"), ("1", "#000000", ".26")], x2="1", y2="0")
 
 
 def burst_d(cx, cy, r, inner=0.48, spikes=13):
-    """An irregular explosion burst (deterministic jitter)."""
     pts = []
     for i in range(spikes * 2):
         ang = -math.pi / 2 + i * math.pi / spikes
@@ -171,30 +162,24 @@ def windows(x0, y0, cols, rows, dx, dy, w, h, colour, seed, density=0.55):
     return out
 
 
-def fold_shade(gid):
-    return lingrad_a(gid, [("0", "#000000", ".22"), (".22", "#FFFFFF", ".16"), (".45", "#000000", ".18"),
-                           (".7", "#FFFFFF", ".14"), ("1", "#000000", ".26")], x2="1", y2="0")
-
-
 def wave_d(x, y, w, h, amp):
-    """A waving flag outline: straight hoist, sinusoidal top and bottom edges."""
     pts_top = [(x + w * i / 8.0, y + amp * math.sin(i * math.pi / 4)) for i in range(9)]
     pts_bot = [(x + w * i / 8.0, y + h + amp * math.sin(i * math.pi / 4)) for i in range(8, -1, -1)]
     return "M" + " L".join("%s %s" % (n(a), n(b)) for a, b in pts_top + pts_bot) + " Z"
 
 
-def flag_us(x, y, w, h, cid):
+def flag_us(x, y, w, h, _cid):
     s = "".join(rect(x, y - 2 + i * (h + 4) / 13.0, w, (h + 4) / 13.0 + 0.3,
                      "#B42318" if i % 2 == 0 else "#FAF7F0") for i in range(13))
     cw, ch = w * 0.42, (h + 4) * 7 / 13.0
     s += rect(x, y - 2, cw, ch, "#1F3A6E")
-    for r in range(4):
-        for c in range(5):
-            s += circle(x + cw * (c + 0.6) / 5.2, y - 2 + ch * (r + 0.6) / 4.2, 0.62, "#FAF7F0")
+    for r in range(3):
+        for c in range(4):
+            s += circle(x + cw * (c + 0.7) / 4.4, y - 2 + ch * (r + 0.7) / 3.4, 0.55, "#FAF7F0")
     return s
 
 
-def flag_cn(x, y, w, h, cid):
+def flag_cn(x, y, w, h, _cid):
     s = rect(x, y - 2, w, h + 4, "#D52B1E")
     s += path(star_d(x + w * 0.17, y + h * 0.28, h * 0.16), "#FFDE00")
     for a, b in ((0.33, 0.1), (0.4, 0.2), (0.4, 0.35), (0.33, 0.46)):
@@ -202,19 +187,18 @@ def flag_cn(x, y, w, h, cid):
     return s
 
 
-def flag_ru(x, y, w, h, cid):
+def flag_ru(x, y, w, h, _cid):
     b = (h + 4) / 3.0
     return (rect(x, y - 2, w, b + 0.3, "#FAF7F0") + rect(x, y - 2 + b, w, b + 0.3, "#1C3F94")
             + rect(x, y - 2 + 2 * b, w, b, "#D52B1E"))
 
 
 def pole_flag(px, top, w, h, fn, cid, amp=1.6):
-    """A gold flagpole with a waving, fold-shaded flag."""
     d = wave_d(px + 1, top + 2, w, h, amp)
     return ('<clipPath id="%s"><path d="%s"/></clipPath>' % (cid, d)
             + '<g clip-path="url(#%s)">%s%s</g>' % (cid, fn(px + 1, top + 2, w, h, cid),
-                                                     path(d, "url(#%sF)" % cid[:2]))
-            + path(d, "none", "#000000", 0.4, ' stroke-opacity=".35"'))
+                                                     path(d, "url(#%sF)" % cid))
+            + path(d, "none", "#000000", 0.4, ' stroke-opacity=".28"'))
 
 
 def palm(x, base, height, lean, colour, scale=1.0):
@@ -223,7 +207,7 @@ def palm(x, base, height, lean, colour, scale=1.0):
         n(x - 1.6 * scale), n(base), n(x + lean * 0.2 - 1.2 * scale), n(base - height * 0.55), n(tx - 0.8 * scale), n(ty),
         n(tx + 0.8 * scale), n(ty), n(x + lean * 0.2 + 1.2 * scale), n(base - height * 0.55), n(x + 1.6 * scale), n(base)),
         colour)
-    for ang, ln in ((-170, 17), (-140, 15), (-105, 11), (-60, 13), (-25, 16), (10, 14), (160, 13)):
+    for ang, ln in ((-170, 18), (-140, 16), (-105, 12), (-60, 14), (-25, 17), (10, 15), (160, 14)):
         a = math.radians(ang)
         ex, ey = tx + ln * scale * math.cos(a), ty + ln * scale * math.sin(a) + 5 * scale
         mx, my = tx + ln * scale * 0.55 * math.cos(a), ty + ln * scale * 0.55 * math.sin(a) - 3 * scale
@@ -233,530 +217,560 @@ def palm(x, base, height, lean, colour, scale=1.0):
     return s
 
 
-# ------------------------------------------------------- row 1 art (322x118)
+# ------------------------------------------------------- row 1 art (322x102)
 
 def art_apec():
-    W, H = 322, 118
+    """Shenzhen: a bright harbour terrace, APEC table, three large flags."""
+    W, H = 322, 102
     d = ("<defs>"
-         + lingrad_a("apS", [("0", "#0A0F2E", "1"), (".42", "#2E1A57", "1"), (".72", "#9B3468", "1"),
-                             ("1", "#F2874A", "1")])
-         + radgrad("apG", [("0", "#FFC27A", ".85"), (".5", "#FF8A5B", ".25"), ("1", "#FF8A5B", "0")], 161, 84, 120)
-         + lingrad_a("apW", [("0", "#2A1B4A", "1"), ("1", "#0B0820", "1")])
-         + lingrad_a("apT", [("0", "#A86B33", "1"), ("1", "#5E3818", "1")])
-         + lingrad_a("apP", [("0", "#7A1426", "1"), ("1", "#3A0812", "1")])
-         + lingrad_a("apL", [("0", "#FFF3C4", ".34"), ("1", "#FFF3C4", "0")])
-         + fold_shade("aUF") + fold_shade("aCF") + fold_shade("aRF")
+         + lingrad("apS", [("0", "#9FD3EE", "1"), (".55", "#D6EEF8", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("apW", [("0", "#8FD0E6", "1"), ("1", "#4FA8C6", "1")])
+         + lingrad("apT", [("0", "#FBF4E3", "1"), ("1", "#E3D2AE", "1")])
+         + fold_shade("FUF") + fold_shade("FCF") + fold_shade("FRF")
          + "</defs>")
-    b = d + rect(0, 0, W, 86, "url(#apS)") + rect(0, 0, W, 86, "url(#apG)")
-    for x, y in ((14, 8), (40, 18), (78, 6), (120, 14), (204, 9), (236, 20), (290, 7), (306, 24)):
-        b += circle(x, y, 0.8, "#FFFFFF", extra=' fill-opacity=".8"')
-    # far skyline (haze)
-    far = "#3E2563"
-    for x, w, h in ((0, 22, 26), (20, 16, 34), (34, 20, 22), (52, 12, 40), (86, 20, 30), (104, 14, 24),
-                    (190, 18, 28), (206, 14, 36), (276, 18, 30), (294, 28, 22)):
-        b += rect(x, 78 - h, w, h, far)
-    # near skyline: Kingkey 100 (left), Ping An Finance Centre with spire (right)
-    near = "#160C2C"
-    b += path("M58 78 L60 28 Q64 22 68 22 Q72 22 76 28 L78 78 Z", near)
-    b += path("M242 78 L246 22 L252 14 L254 2 L256 14 L262 22 L266 78 Z", near)
-    for x, w, h in ((0, 18, 18), (16, 14, 26), (30, 22, 20), (78, 18, 32), (96, 14, 22), (176, 16, 30),
-                    (192, 20, 22), (212, 16, 38), (228, 14, 26), (266, 18, 34), (284, 16, 22), (300, 22, 28)):
-        b += rect(x, 78 - h, w, h, near)
-    lit = "#FFD27A"
-    b += windows(61, 32, 4, 11, 4, 4, 1.6, 1.6, lit, 1) + windows(247, 26, 4, 13, 4, 4, 1.6, 1.6, lit, 2)
-    for x, w, h, s in ((80, 18, 32, 3), (178, 16, 30, 4), (214, 16, 38, 5), (268, 18, 34, 6), (302, 22, 28, 7),
-                       (18, 14, 26, 8)):
-        b += windows(x + 2, 78 - h + 3, int((w - 3) // 4), int((h - 5) // 4), 4, 4, 1.6, 1.6, lit, s, 0.4)
-    # harbour water with reflections
-    b += rect(0, 78, W, 8, "url(#apW)")
-    for x, w in ((20, 30), (58, 18), (110, 40), (150, 22), (212, 30), (244, 22), (284, 24)):
-        b += rect(x, 80 + (x % 3), w, 0.8, "#FFB86B", extra=' fill-opacity=".45"')
-    # stage: floor, spotlights, flags, table
-    b += rect(0, 86, W, 32, "#0B0612")
-    for x in (113, 173, 233):
-        b += poly([(x - 6, 0), (x + 6, 0), (x + 30, 86), (x - 30, 86)], "url(#apL)")
-    for px, fn, cid in ((92, flag_us, "aU"), (152, flag_cn, "aC"), (212, flag_ru, "aR")):
-        b += rect(px - 1.1, 16, 2.2, 70, "#E9C46A") + circle(px, 15, 2.4, "#F6D77B")
-        b += pole_flag(px, 16, 42, 25, fn, cid)
-    b += poly([(66, 80), (256, 80), (266, 88), (56, 88)], "url(#apT)")
-    b += rect(56, 88, 210, 13, "url(#apP)") + rect(56, 88, 210, 1.4, "#E9C46A")
-    for x in (104, 161, 218):
-        b += rect(x - 10, 82.5, 20, 4, "#F8F4EA", 0.6) + rect(x - 0.6, 74, 1.2, 9, "#1F1F1F")
-        b += circle(x, 73.6, 1.6, "#111111")
-    b += poly([(148, 84), (174, 84), (176, 87.4), (146, 87.4)], "#FFFFFF")
-    b += rect(0, 104, W, 14, "#000000", extra=' fill-opacity=".55"')
-    b += t(161, 114.2, "SHENZHEN &#183; APEC 2026 &#183; PEACE DECLARATION", 8.3, "#F6D98F", 900, "middle", 1.9)
-    return svg(W, H, b)
-
-
-ANT_SERIES = [  # (x, price): $83 IPO price, $111.53 high, $97.17 close (BBC)
-    (20, 83.0), (30, 83.0), (36, 99.0), (44, 104.2), (52, 102.6), (62, 108.4), (72, 106.9), (84, 110.2),
-    (96, 111.53), (106, 108.6), (116, 109.4), (128, 105.4), (140, 107.0), (152, 103.1), (164, 104.8),
-    (176, 101.4), (188, 103.0), (200, 99.6), (212, 101.2), (224, 98.4), (236, 100.0), (248, 97.2),
-    (260, 98.9), (272, 96.5), (284, 98.0), (296, 96.9), (304, 97.17)]
-
-
-def art_anthropic():
-    W, H = 322, 118
-
-    def py(p):
-        return 102 - (p - 80) / (114 - 80) * 84
-
-    d = ("<defs>"
-         + lingrad_a("anB", [("0", "#0B1730", "1"), ("1", "#050B18", "1")])
-         + radgrad("anR", [("0", "#10B981", ".28"), ("1", "#10B981", "0")], 110, 30, 150)
-         + lingrad_a("anA", [("0", "#34D399", ".62"), (".55", "#10B981", ".2"), ("1", "#10B981", "0")])
-         + glow_filter("anGl", 2.2, "#34D399", 2)
-         + glow_filter("anGb", 1.6, "#FBBF24")
-         + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#anB)") + rect(0, 0, W, H, "url(#anR)")
-    for p in (85, 90, 95, 100, 105, 110):
-        b += line(12, py(p), 310, py(p), "#1D3A5F", 0.6 if p % 10 else 0.9)
-    for x in range(20, 311, 24):
-        b += line(x, 10, x, 102, "#152C4A", 0.5)
-    # volume bars
-    for i, (x, _p) in enumerate(ANT_SERIES[1:-1]):
-        hgt = 3 + ((i * 37) % 11) * 0.7 + (9 if i < 4 else 0)
-        b += rect(x - 2, 102 - hgt, 4, hgt, "#1E4D6B", extra=' fill-opacity=".8"')
-    pts = [(x, py(p)) for x, p in ANT_SERIES]
-    dl = "M" + " L".join("%s %s" % (n(x), n(y)) for x, y in pts)
-    b += path(dl + " L304 102 L20 102 Z", "url(#anA)")
-    b += line(12, py(83), 310, py(83), "#FBBF24", 1.1, "4 3")
-    b += path(dl, "none", "#6EE7B7", 2.4, ' stroke-linejoin="round" stroke-linecap="round" filter="url(#anGl)"')
-    b += circle(20, py(83), 3.4, "#FBBF24", "#0B1730", 1.2)
-    b += circle(96, py(111.53), 4.6, "#FFFFFF", "#10B981", 2.4, ' filter="url(#anGl)"')
-    b += circle(304, py(97.17), 4.2, "#34D399", "#FFFFFF", 1.6)
-    # record-raise badge (top left), peak, close pill
-    b += rect(238, 66, 68, 32, "#FBBF24", 3, extra=' filter="url(#anGb)"')
-    b += t(272, 84, "$81BN", 16, "#111827", 900, "middle", -0.2)
-    b += t(272, 94.6, "RECORD IPO", 6.2, "#111827", 900, "middle", 1)
-    b += t(106, 17, "PEAK $111.53", 11.5, "#FFFFFF", 900, "start", 0.3)
-    b += t(106, 27, "ALMOST $2TN VALUE", 7.4, "#6EE7B7", 900, "start", 1)
-    b += rect(226, 26, 84, 30, "#0F2A22", 3, "#34D399", 1.2)
-    b += t(268, 38.6, "CLOSE $97.17", 10.4, "#FFFFFF", 900, "middle", 0.2)
-    b += t(268, 51, "+17% DAY ONE", 9, "#34D399", 900, "middle", 0.6)
-    b += rect(0, 104, W, 14, "#030712")
-    b += t(12, 113.8, "ANT &#183; NASDAQ &#183; THU 19 NOV", 8, "#E5E7EB", 900, "start", 1.4)
-    b += t(310, 113.8, "- - $83 IPO PRICE", 8, "#FBBF24", 900, "end", 0.9)
+    b = d + rect(0, 0, W, 76, "url(#apS)")
+    b += circle(262, 16, 15, "#FFE7A0", extra=' fill-opacity=".35"') + circle(262, 16, 9, "#FFF3C4")
+    for x, y, s in ((32, 16, 1.0), (62, 24, .7), (196, 20, .8), (292, 30, .55)):
+        b += (circle(x, y, 4 * s, "#FFFFFF", extra=' fill-opacity=".85"')
+              + circle(x + 5 * s, y + 1, 3.2 * s, "#FFFFFF", extra=' fill-opacity=".85"')
+              + circle(x - 4 * s, y + 1.5, 2.6 * s, "#FFFFFF", extra=' fill-opacity=".85"'))
+    far = "#B9CFDA"
+    for x, w, h in ((0, 20, 18), (18, 14, 27), (32, 18, 16), (50, 12, 24), (62, 16, 19),
+                    (196, 18, 22), (214, 12, 30), (226, 16, 18), (286, 20, 24), (306, 14, 17)):
+        b += rect(x, 76 - h, w, h, far)
+    b += path("M236 76 L237 34 L241 30 L245 34 L246 76 Z", far)
+    near = "#8FAFBE"
+    for x, w, h in ((0, 16, 12), (16, 12, 20), (28, 18, 14), (46, 10, 18), (56, 14, 22),
+                    (70, 12, 13), (206, 16, 18), (222, 10, 24), (232, 14, 15), (294, 14, 20), (308, 14, 13)):
+        b += rect(x, 76 - h, w, h, near)
+        b += windows(x + 2, 78 - h, max(1, int((w - 3) // 3)), max(1, int((h - 3) // 4)),
+                     3, 4, 1.2, 1.2, "#F4FBFF", x, 0.45)
+    b += path("M176 76 L176 50 L180 46 L184 50 L184 76 Z", "#7FA0B2")
+    b += rect(0, 76, W, 10, "url(#apW)")
+    for x, w in ((18, 26), (52, 16), (102, 38), (150, 20), (214, 26), (252, 18), (292, 22)):
+        b += rect(x, 78 + (x % 3), w, .9, "#FFFFFF", extra=' fill-opacity=".5"')
+    b += rect(0, 86, W, 16, "#EFE2C6") + line(0, 86, W, 86, "#CBB88F", 1)
+    b += poly([(62, 86), (260, 86), (272, 94), (50, 94)], "url(#apT)")
+    b += rect(50, 94, 222, 4, "#D8C39B") + rect(56, 91, 210, 2.2, "#9A1B1F")
+    for x in (96, 161, 226):
+        b += rect(x - 11, 70, 22, 16, "#F8F0DE", 2, "#B9A57C", .7)
+        b += rect(x - 8, 72, 16, 7, "#E8D7B4", 1)
+    for px, fn, cid in ((64, flag_us, "FU"), (140, flag_cn, "FC"), (216, flag_ru, "FR")):
+        b += rect(px - .8, 16, 1.6, 68, "#8A6A3A") + circle(px, 15.5, 1.8, "#C9971F")
+        b += pole_flag(px, 16, 38, 24, fn, cid, 1.3)
+    for x in (110, 161, 212):
+        b += rect(x - 6, 83, 12, 2.6, "#FDFBF6", 1, "#8A8272", .5)
+        b += rect(x - .5, 78, 1, 5, "#3A342A") + circle(x, 77.5, 1.2, "#3A342A")
+    b += rect(8, 7, 118, 14, "#FDFBF6", 1, "#9A1B1F", .9)
+    b += t(67, 16.6, "SHENZHEN &#183; APEC", 7.4, "#9A1B1F", 900, "middle", 1.1)
+    b += t(161, 99.2, "DECLARATION ON PEACE", 6.2, "#FDFBF6", 900, "middle", 1.2)
     return svg(W, H, b)
 
 
 def art_icj():
-    W, H = 322, 118
+    """The Hague: sunlit Peace Palace limestone and gold scales of justice."""
+    W, H = 322, 102
     d = ("<defs>"
-         + lingrad_a("icS", [("0", "#0A1024", "1"), (".6", "#22234F", "1"), ("1", "#3B2C5E", "1")])
-         + radgrad("icR", [("0", "#FCD34D", ".55"), (".45", "#F59E0B", ".14"), ("1", "#F59E0B", "0")], 161, 44, 80)
-         + lingrad_a("icGd", [("0", "#FEF3C7", "1"), (".5", "#F2C94C", "1"), ("1", "#B7791F", "1")])
-         + lingrad_a("icW", [("0", "#1A1C3A", "1"), ("1", "#0A0B1C", "1")])
-         + glow_filter("icGl", 2.4, "#FBBF24")
+         + lingrad("icS", [("0", "#BFDDF0", "1"), (".6", "#E4F1F9", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("icL", [("0", "#EFDDB6", "1"), ("1", "#D8C193", "1")])
+         + lingrad("icR", [("0", "#7FA07F", "1"), ("1", "#54745A", "1")])
+         + lingrad("icG", [("0", "#E8C25C", "1"), ("1", "#B8861E", "1")])
          + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#icS)") + rect(0, 0, W, H, "url(#icR)")
-    for x, y in ((18, 10), (44, 30), (70, 12), (100, 24), (224, 12), (256, 30), (284, 8), (306, 22), (126, 8)):
-        b += circle(x, y, 0.85, "#FFFFFF", extra=' fill-opacity=".75"')
-    # Peace Palace: long brick facade, steep roofs, clock tower
-    pal = "#120F26"
-    b += rect(26, 70, 270, 30, pal)
-    for x in range(30, 290, 16):
-        b += path("M%s 70 L%s 61 L%s 70 Z" % (x, x + 8, x + 16), pal)
-    b += rect(228, 40, 30, 30, pal) + path("M226 40 L243 18 L260 40 Z", pal) + rect(241.5, 8, 3, 11, pal)
-    b += circle(243, 50, 5.2, "#F4C46A") + circle(243, 50, 3.6, pal) + line(243, 50, 243, 47.2, "#F4C46A", 0.8)
-    b += rect(60, 54, 28, 16, pal) + path("M58 54 L74 40 L90 54 Z", pal)
-    b += windows(32, 74, 33, 3, 8, 7, 3, 4, "#F4C46A", 11, 0.62)
-    # reflecting pond
-    b += rect(0, 100, W, 4, "url(#icW)")
-    for x in range(36, 290, 22):
-        b += rect(x, 101.4, 9, 0.7, "#F4C46A", extra=' fill-opacity=".45"')
-    # scales of justice
-    g = "url(#icGd)"
-    sc = (rect(159, 20, 4, 50, g) + rect(144, 68, 34, 5, g, 1.5) + circle(161, 17, 4.6, g)
-          + rect(109, 26, 104, 3.6, g, 1.6))
-    for cx in (116, 206):
-        sc += line(cx, 29.6, cx - 14, 53, "#F2C94C", 1.1) + line(cx, 29.6, cx + 14, 53, "#F2C94C", 1.1)
-        sc += path("M%s 53 Q%s 65 %s 53 Z" % (cx - 17, cx, cx + 17), g)
-    b += '<g filter="url(#icGl)">' + sc + "</g>"
-    b += t(14, 18, "GAMBIA v. MYANMAR", 8.2, "#F3E3B3", 900, "start", 1.4)
-    b += t(308, 18, "GUILTY", 10.5, "#FCA5A5", 900, "end", 2.2)
-    b += rect(0, 104, W, 14, "#05060F", extra=' fill-opacity=".85"')
-    b += t(161, 114.2, "THE HAGUE &#183; FIRST STATE EVER FOUND GUILTY OF GENOCIDE", 7.9, "#F6D98F", 900,
-           "middle", 1.3)
+    b = d + rect(0, 0, W, H, "url(#icS)")
+    b += circle(280, 18, 16, "#FFE7A0", extra=' fill-opacity=".35"') + circle(280, 18, 9, "#FFF3C4")
+    b += rect(0, 88, W, 14, "#7FA36B")
+    b += rect(26, 52, 270, 38, "url(#icL)") + rect(26, 52, 270, 3, "#C9B183")
+    b += rect(128, 34, 66, 56, "#F0DEB8") + rect(128, 34, 66, 3, "#C9B183")
+    b += rect(150, 16, 22, 20, "#EAD6AC") + poly([(146, 17), (161, 2), (176, 17)], "url(#icR)")
+    b += rect(159.5, .5, 3, 4, "#C9971F")
+    b += circle(161, 10, 3.2, "#FDFBF6", "#2C313A", .6) + line(161, 10, 161, 8, "#2C313A", .7)
+    for x in range(34, 128, 12):
+        b += rect(x, 58, 5, 30, "#E2CDA2") + rect(x + 4, 58, 1, 30, "#C9B183")
+    for x in range(198, 292, 12):
+        b += rect(x, 58, 5, 30, "#E2CDA2") + rect(x + 4, 58, 1, 30, "#C9B183")
+    for x in (134, 142, 180, 188):
+        b += rect(x, 56, 5, 34, "#E2CDA2") + rect(x + 4, 56, 1, 34, "#C9B183")
+    b += windows(38, 66, 7, 4, 12, 7, 4, 4, "#7A6646", 3, .6)
+    b += windows(202, 66, 7, 4, 12, 7, 4, 4, "#7A6646", 9, .6)
+    b += windows(150, 38, 2, 2, 8, 7, 4, 4, "#7A6646", 5, .7)
+    b += rect(120, 86, 82, 4, "#DCC79C") + rect(112, 90, 98, 3, "#D2BB8D")
+    g = "url(#icG)"
+    b += rect(58, 84, 44, 5, "#9A1B1F", 1)
+    b += rect(78, 40, 4, 44, g) + circle(80, 37, 3.4, g)
+    b += rect(42, 44, 76, 3.4, g, 1.6)
+    for cx in (48, 112):
+        b += line(cx, 47, cx - 10, 64, "#B8861E", 1) + line(cx, 47, cx + 10, 64, "#B8861E", 1)
+        b += path("M%d 64 Q%d 74 %d 64 Z" % (cx - 12, cx, cx + 12), g)
+    b += t(10, 14, "GAMBIA v. MYANMAR", 7, "#2C313A", 900, "start", 1.0)
+    b += rect(238, 8, 76, 22, "#9A1B1F", 1, "#FDFBF6", .8)
+    b += t(276, 18, "GUILTY", 8.6, "#FDFBF6", 900, "middle", 1.4)
+    b += t(276, 26.5, "9&#8211;6 VOTE", 6.4, "#F7E7C2", 900, "middle", .9)
     return svg(W, H, b)
 
 
-# ------------------------------------------------------- row 2 art (240x86)
+ANT_SERIES = [
+    (20, 83.0), (28, 83.0), (36, 99.0), (46, 104.2), (58, 102.6), (70, 108.4), (84, 110.2),
+    (96, 111.53), (108, 108.6), (122, 109.4), (134, 105.4), (148, 107.0), (160, 103.1),
+    (174, 104.8), (186, 101.4), (200, 103.0), (212, 99.6), (226, 101.2), (238, 98.4),
+    (250, 100.0), (262, 97.2), (274, 98.9), (286, 96.5), (296, 98.0), (304, 97.17),
+]
 
-def art_gta():
-    W, H = 240, 86
+
+def art_anthropic():
+    """New York: a crisp emerald Nasdaq chart on warm paper."""
+    W, H = 322, 102
+
+    def py(p):
+        return 88 - (p - 80) / (114 - 80) * 76
+
     d = ("<defs>"
-         + lingrad_a("gt2S", [("0", "#10032A", "1"), (".3", "#3A0F62", "1"), (".58", "#8B1B7C", "1"),
-                              (".82", "#DE4A7C", "1"), ("1", "#FFB45F", "1")])
-         + lingrad_a("gt2Sea", [("0", "#3A0E56", "1"), (".55", "#210A3A", "1"), ("1", "#0B0220", "1")])
-         + lingrad_a("gt2Road", [("0", "#1C0838", "1"), ("1", "#05010C", "1")])
-         + radgrad("gt2Glow", [("0", "#FFB36B", ".7"), (".5", "#FF4F8B", ".22"), ("1", "#FF4F8B", "0")],
-                   158, 49, 58)
-         + radgrad("gt2Sun", [("0", "#FFF4C2", "1"), (".45", "#FFC15E", "1"), (".8", "#FF6E8A", "1"),
-                              ("1", "#E23E86", "1")], 158, 49, 21)
-         + lingrad_a("gt2Beam", [("0", "#FFF0B8", ".5"), ("1", "#FFF0B8", "0")], x2="1", y2="0")
-         + glow_filter("gt2N", 2.0, "#FF3FD8", 2)
-         + glow_filter("gt2G", 1.1, "#22C55E")
-         + blur_filter("gt2B", 1.4)
-         + '<clipPath id="gt2SunC"><circle cx="158" cy="49" r="21"/></clipPath>'
+         + lingrad("anB", [("0", "#FDFAF1", "1"), ("1", "#F3EBD9", "1")])
+         + lingrad("anA", [("0", "#8FD9B8", ".85"), ("1", "#E8F6EE", ".15")])
          + "</defs>")
-    b = d + rect(0, 0, W, 62, "url(#gt2S)") + rect(0, 0, W, 62, "url(#gt2Glow)")
-    for x, y in ((18, 9), (40, 15), (66, 7), (96, 12), (132, 6), (196, 9), (222, 15), (232, 6)):
-        b += circle(x, y, 0.7, "#FFFFFF", extra=' fill-opacity=".8"')
-    # retro sun with horizontal cut bands
-    sun = circle(158, 49, 21, "url(#gt2Sun)")
-    bands = "".join(rect(135, y, 46, 1.1 + i * 0.55, "#C22C74", extra=' fill-opacity=".82"')
-                    for i, y in enumerate((42.5, 46.5, 50.5, 54.5)))
-    b += '<g clip-path="url(#gt2SunC)">' + sun + bands + "</g>"
-    for x, y, w, h, a in ((14, 30, 54, 2.4, .26), (52, 22, 40, 1.8, .16), (176, 34, 46, 2.2, .2)):
-        b += rect(x, y, w, h, "#FFB8C8", 1.2, extra=' fill-opacity="%s"' % n(a))
-    # distant deco skyline on the horizon
-    far = "#2A0B4A"
-    for x, w, h in ((2, 13, 12), (16, 10, 19), (27, 16, 9), (45, 9, 16), (57, 13, 11),
-                    (188, 12, 16), (201, 16, 10), (218, 9, 20), (229, 11, 13)):
-        b += rect(x, 56 - h, w, h, far)
-    b += path("M72 56 L72 40 L75 40 L75 33 L78 33 L78 56 Z", "#1B0536")
-    b += path("M84 56 L84 44 L88 38 L92 44 L92 56 Z", "#1B0536")
-    b += line(72, 40, 78, 40, "#FF6FE0", .8, extra=' filter="url(#gt2N)"')
-    b += line(84, 44, 92, 44, "#FF6FE0", .7, extra=' filter="url(#gt2N)"')
-    b += windows(18, 42, 2, 3, 3, 3, 1.2, 1.2, "#FFD27A", 5, .6)
-    b += windows(202, 44, 3, 3, 3, 3, 1.2, 1.2, "#FFD27A", 9, .5)
-    # ocean strip and glitter
-    b += rect(0, 56, W, 7, "url(#gt2Sea)")
-    for i, (w, y) in enumerate(((36, 58), (26, 60), (16, 62))):
-        b += rect(158 - w / 2.0, y, w, 0.9, "#FFC36B", extra=' fill-opacity="%s"' % n(.55 - i * .1))
-    b += line(0, 56, W, 56, "#FF7BE8", .9, extra=' filter="url(#gt2N)"')
-    # boulevard with perspective lane lines
-    b += rect(0, 62, W, 24, "url(#gt2Road)")
-    b += path("M118 62 L94 86 L100 86 L120 62 Z", "#5B1B78", extra=' fill-opacity=".5"')
-    b += path("M124 62 L152 86 L158 86 L126 62 Z", "#5B1B78", extra=' fill-opacity=".5"')
-    b += line(120, 62, 106, 86, "#FF3FD8", 1, extra=' stroke-opacity=".55" filter="url(#gt2N)"')
-    b += line(126, 62, 144, 86, "#FF3FD8", 1, extra=' stroke-opacity=".55" filter="url(#gt2N)"')
-    for x, y, w in ((18, 70, 20), (50, 75, 12), (188, 68, 16), (202, 77, 9), (158, 84, 14)):
-        b += rect(x, y, w, .7, "#FF7BE8", extra=' fill-opacity=".22"')
-    b += palm(26, 86, 54, -5, "#0A0220", .85) + palm(40, 86, 34, 4, "#12042A", .6)
-    b += palm(210, 86, 46, 6, "#0A0220", .8) + palm(224, 86, 30, 3, "#12042A", .55)
-    # sleek sports car on the glowing boulevard
-    b += path("M84 78 L92 73 Q102 70 116 69 L128 65 Q141 61 154 65 L166 69 Q178 71 184 75 L186 78 Z",
-              "#1A0A2E")
-    b += path("M92 73 Q102 70 116 69 L128 65 Q141 61 154 65 L166 69 Q178 71 184 75", "none",
-              "#FF7BE8", 1.1, ' stroke-opacity=".9" filter="url(#gt2N)"')
-    b += path("M126 65 Q140 61.5 153 65 L158 68.5 L121 68.5 Z", "#4C1D95")
-    b += line(124, 66, 151, 66, "#7DD3FC", .9, extra=' stroke-opacity=".7"')
-    b += circle(110, 78, 5.4, "#03010A", "#5B21B6", 1.1)
-    b += circle(110, 78, 2.3, "#A855F7", extra=' fill-opacity=".9"')
-    b += circle(164, 78, 5.4, "#03010A", "#5B21B6", 1.1)
-    b += circle(164, 78, 2.3, "#A855F7", extra=' fill-opacity=".9"')
-    b += rect(85, 72.5, 6, 1.8, "#FF2D55", 1, extra=' filter="url(#gt2N)"')
-    b += poly([(183, 73.5), (206, 69), (212, 78), (184, 77.5)], "url(#gt2Beam)")
-    b += circle(183, 74.6, 1.4, "#FFF3C4", extra=' filter="url(#gt2N)"')
-    b += '<ellipse cx="136" cy="83" rx="48" ry="2.6" fill="#FF3FD8" opacity=".45" filter="url(#gt2B)"/>'
-    # badges
-    b += rect(7, 5, 98, 13, "#12041F", 2, "#FDE68A", .8)
-    b += t(56, 14.3, "$1.5BN+ PRE-SALES", 7.6, "#FDE68A", 900, "middle", .7)
-    b += rect(178, 5, 58, 30, "#15803D", 3, "#BBF7D0", 1, ' filter="url(#gt2G)"')
-    b += t(207, 20.5, "99", 17.5, "#FFFFFF", 900, "middle", -0.3)
-    b += t(207, 32.6, "METASCORE", 5.2, "#DCFCE7", 900, "middle", .8)
+    b = d + rect(0, 0, W, H, "url(#anB)")
+    for p in (85, 90, 95, 100, 105, 110):
+        b += line(16, py(p), 306, py(p), "#DDD2BC", .6)
+    dl = "M" + " L".join("%s %s" % (n(x), n(py(p))) for x, p in ANT_SERIES)
+    b += path(dl + " L304 92 L20 92 Z", "url(#anA)")
+    b += line(16, py(83), 306, py(83), "#C9971F", 1.1, "4 3")
+    b += path(dl, "none", "#0E7A4E", 2.6, ' stroke-linejoin="round" stroke-linecap="round"')
+    for x, p in ((20, 83), (96, 111.53), (304, 97.17)):
+        b += circle(x, py(p), 4, "#FFFFFF", "#0E7A4E", 1.6)
+    b += t(18, 15, "ANT &#183; NASDAQ", 7.6, "#2C313A", 900, "start", 1.2)
+    b += t(158, 13, "PEAK $111.53", 7.4, "#0E7A4E", 900, "start", .4)
+    b += rect(232, 8, 78, 30, "#0E7A4E", 2, "#FDFBF6", .8)
+    b += t(271, 24, "$81BN", 12.6, "#FDFBF6", 900, "middle", -.2)
+    b += t(271, 35, "RECORD IPO", 5.2, "#CFEBDD", 900, "middle", .9)
+    b += t(304, 97.5, "CLOSE $97.17", 7.4, "#2C313A", 900, "end", .4)
     return svg(W, H, b)
 
+
+# ---------------------------------------------------- small feature art (190x58)
 
 def art_cop():
-    W, H = 240, 86
+    """Antalya: bright Mediterranean COP31 dome, wind and solar power."""
+    W, H = 190, 58
     d = ("<defs>"
-         + lingrad_a("cp2S", [("0", "#0B0A2A", "1"), (".3", "#24124E", "1"), (".58", "#5B2A6E", "1"),
-                              (".78", "#C25B5A", "1"), ("1", "#F2A65A", "1")])
-         + lingrad_a("cp2Sea", [("0", "#2A1C50", "1"), (".45", "#123A54", "1"), ("1", "#081C2E", "1")])
-         + radgrad("cp2Glow", [("0", "#FFB86B", ".42"), (".55", "#F97316", ".12"), ("1", "#F97316", "0")],
-                   120, 58, 86)
-         + lingrad_a("cp2Dome", [("0", "#152A5E", "1"), (".55", "#2C5C96", "1"), ("1", "#5FA6C8", "1")])
-         + lingrad_a("cp2Sol", [("0", "#0EA5E9", "1"), (".6", "#38BDF8", "1"), ("1", "#A5F3FC", "1")], x2="1", y2="1")
-         + lingrad_a("cp2Enter", [("0", "#FDE68A", ".95"), ("1", "#F59E0B", ".5")])
-         + glow_filter("cp2G", 1.5, "#5EEAD4")
-         + glow_filter("cp2A", 1.6, "#FDE68A")
-         + blur_filter("cp2B", 1.7)
+         + lingrad("cpS", [("0", "#BFE4F5", "1"), (".65", "#E8F7FC", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("cpSea", [("0", "#3FAFCB", "1"), ("1", "#237E9E", "1")])
+         + lingrad("cpD", [("0", "#FDFBF6", "1"), ("1", "#E4D6B8", "1")])
          + "</defs>")
-    b = d + rect(0, 0, W, 64, "url(#cp2S)") + rect(0, 0, W, 64, "url(#cp2Glow)")
-    for x, y in ((10, 9), (32, 16), (58, 7), (86, 12), (150, 8), (174, 16), (196, 22)):
-        b += circle(x, y, 0.7, "#FFFFFF", extra=' fill-opacity=".75"')
-    b += path("M230 4 A8 8 0 1 0 230 20 A6.2 6.2 0 1 1 230 4 Z", "#FDE68A", extra=' filter="url(#cp2A)"')
-    # Mediterranean mountains behind the bay
-    b += path("M0 54 L18 46 L34 50 L52 42 L70 48 L90 44 L112 50 L132 46 L154 51 L174 45 L196 50 "
-              "L214 47 L240 52 L240 58 L0 58 Z", "#2B1B4E", extra=' fill-opacity=".9"')
-    b += rect(0, 54, W, 10, "url(#cp2Sea)")
-    b += line(0, 54, W, 54, "#F2B36A", .7, extra=' stroke-opacity=".7"')
-    for x, w in ((94, 18), (108, 26), (124, 14), (166, 22), (180, 12)):
-        b += rect(x, 56.5, w, .7, "#FFC98A", extra=' fill-opacity=".38"')
-    # COP31 conference dome on the Antalya shore
-    b += path("M92 62 A26 26 0 0 1 144 62 Z", "url(#cp2Dome)", "#8FD3E8", .7)
-    for k in range(1, 6):
-        ang = math.pi + k * math.pi / 6
-        b += line(118, 62, 118 + 26 * math.cos(ang), 62 + 26 * math.sin(ang), "#8FD3E8", .45,
-                  extra=' stroke-opacity=".32"')
-    for rr in (9, 17):
-        b += path("M%s 62 A%s %s 0 0 1 %s 62" % (n(118 - rr), n(rr), n(rr), n(118 + rr)),
-                  "none", "#8FD3E8", .4, ' stroke-opacity=".28"')
-    b += rect(106, 55, 24, 7, "url(#cp2Enter)", 1, extra=' filter="url(#cp2A)"')
-    b += line(118, 55, 118, 62, "#5B3A12", .7)
-    b += line(118, 36, 118, 30, "#E2E8F0", .8) + poly([(118, 30), (125, 32.4), (118, 34.8)], "#FCA5A5")
-    b += line(104, 62, 132, 62, "#FDE68A", .9, extra=' stroke-opacity=".55"')
-    b += rect(0, 62, W, 24, "#080A1A")
-    b += path("M0 74 Q60 68 120 72 Q180 76 240 70 L240 86 L0 86 Z", "#0D1226")
-    b += path("M0 74 Q60 68 120 72 Q180 76 240 70", "none", "#F2B36A", .7, ' stroke-opacity=".35"')
-    # fossil left: derricks fading into shadow
-    def derrick(x, base, h, a):
-        topx = x + h * 0.16
-        s = '<g opacity="%s">' % n(a)
-        s += line(x - h * .26, base, topx, base - h, "#6B4A32", 1.3)
-        s += line(x + h * .26, base, topx, base - h, "#6B4A32", 1.3)
-        s += line(topx, base - h, topx, base - h - 3.4, "#6B4A32", 1)
-        for f in (.32, .56, .78):
-            half = h * .26 * (1 - f)
-            s += line(topx - half, base - h * f, topx + half, base - h * f, "#6B4A32", .7)
-        s += line(x - h * .26, base, topx + h * .26, base - h, "#6B4A32", .5)
-        s += line(x + h * .26, base, topx - h * .26, base - h, "#6B4A32", .5)
-        return s + "</g>"
-    b += derrick(16, 70, 32, .8) + derrick(40, 70, 24, .5) + derrick(60, 70, 17, .3)
-    for cx, cy, r, a in ((14, 28, 7, .32), (8, 20, 8, .24), (24, 22, 6, .2), (34, 16, 7, .16)):
-        b += circle(cx, cy, r, "#A8A29E", extra=' fill-opacity="%s" filter="url(#cp2B)"' % n(a))
-    b += '<ellipse cx="30" cy="70" rx="28" ry="2.4" fill="#1C1917" opacity=".8"/>'
-    b += circle(8, 66, 1.3, "#F59E0B", extra=' fill-opacity=".6" filter="url(#cp2B)"')
-    # clean right: ridge, turbines and a solar field
-    b += path("M144 86 L144 72 Q168 64 192 68 Q216 72 240 64 L240 86 Z", "#0F5132")
-    b += path("M144 86 L144 76 Q176 68 204 72 Q224 75 240 70 L240 86 Z", "#166534")
-    def turbine(x, base, h, s):
-        top = base - h
-        out = line(x, base, x, top, "#E0F2FE", 1.2 * s)
+    b = d + rect(0, 0, W, H, "url(#cpS)")
+    b += circle(160, 11, 7, "#FFE7A0", extra=' fill-opacity=".55"') + circle(160, 11, 5, "#FFF3C4")
+    for x, y, s in ((26, 10, .6), (78, 8, .5), (122, 14, .45)):
+        b += (circle(x, y, 3 * s, "#FFFFFF", extra=' fill-opacity=".9"')
+              + circle(x + 3 * s, y + .5, 2.4 * s, "#FFFFFF", extra=' fill-opacity=".9"'))
+    b += rect(0, 30, W, 16, "url(#cpSea)")
+    for x, w in ((14, 18), (44, 12), (92, 20), (136, 14), (162, 10)):
+        b += rect(x, 33 + (x % 3), w, .7, "#FFFFFF", extra=' fill-opacity=".55"')
+    b += path("M0 44 Q48 40 96 43 Q146 46 190 42 L190 58 L0 58 Z", "#E8D9B5")
+    b += path("M0 44 Q48 40 96 43 Q146 46 190 42", "none", "#C7AE7F", .8)
+    b += path("M38 44 A18 18 0 0 1 74 44 Z", "url(#cpD)", "#2C313A", .7)
+    b += path("M41 44 A15 15 0 0 1 71 44", "none", "#3E7F5E", 4, ' stroke-opacity=".9"')
+    b += rect(50, 37, 12, 7, "#9A1B1F", 1)
+    b += line(56, 37, 56, 44, "#5B3A12", .6)
+    b += rect(34, 44, 44, 3, "#D8C193") + rect(30, 47, 52, 2, "#CBB88F")
+    for x, h in ((90, 20), (112, 15)):
+        b += line(x, 44, x, 44 - h, "#FDFBF6", 1.2)
         for ang in (-90, 30, 150):
             a = math.radians(ang)
-            out += line(x, top, x + h * .42 * math.cos(a), top + h * .42 * math.sin(a), "#E0F2FE", 1.1 * s,
-                        extra=' stroke-linecap="round"')
-        return out + circle(x, top, 1.4 * s, "#5EEAD4", extra=' filter="url(#cp2G)"')
-    b += turbine(170, 72, 30, 1) + turbine(198, 71, 24, .85) + turbine(222, 72, 19, .7)
-    for r, (y, bw) in enumerate(((74, 24), (78, 31), (82, 37))):
-        for k in range(3):
-            x0 = 150 + k * 26 - r * 3
-            b += poly([(x0, y), (x0 + bw, y), (x0 + bw - 3, y + 3.4), (x0 - 3, y + 3.4)],
-                      "url(#cp2Sol)", "#67E8F9", .4)
-            b += line(x0 + 1, y + 1.5, x0 + bw - 2, y + 1.5, "#0C4A6E", .35,
-                      extra=' stroke-opacity=".55"')
-    b += rect(54, 4, 132, 13, "#080D1F", 6.5, "#F8FAFC", .7)
-    b += t(120, 13.5, "COP31 ANTALYA &#183; DRAFT 2", 7.2, "#F8FAFC", 900, "middle", 1)
-    b += rect(148, 24.8, 88, 9.4, "#07121F", 4, extra=' fill-opacity=".74"')
-    b += t(234, 32.2, "35% ELECTRIC BY 2035", 7, "#BBF7D0", 900, "end", .4)
-    b += t(8, 83, "OIL &#183; GAS &#183; COAL", 7.2, "#FCA5A5", 900, "start", .9)
-    b += t(8, 72.5, "PHASE-OUT", 5, "#E7B7B7", 900, "start", 1.2)
+            b += line(x, 44 - h, x + h * .36 * math.cos(a), 44 - h + h * .36 * math.sin(a), "#FDFBF6", 1.1)
+    for r, (y, bw) in enumerate(((46, 22), (50, 32), (54, 42))):
+        for k in range(2):
+            x0 = 128 + k * 26 - r * 3
+            b += poly([(x0, y), (x0 + bw, y), (x0 + bw - 3, y + 3), (x0 - 3, y + 3)],
+                      "#2C6FA6", "#FDFBF6", .4)
+            b += line(x0 + 1, y + 1.2, x0 + bw - 2, y + 1.2, "#9ED0EA", .35)
+    b += t(9, 13, "ANTALYA", 7, "#2C313A", 900, "start", 1.0)
+    b += t(55, 34, "COP31", 5.8, "#2C313A", 900, "middle", .8)
     return svg(W, H, b)
 
 
 def art_cyclone():
-    W, H = 240, 86
+    """Odisha: a bright coastal cyclone chart with a crimson warning pin."""
+    W, H = 190, 58
     d = ("<defs>"
-         + radgrad("cyO", [("0", "#0F6A9E", "1"), (".6", "#0A3F66", "1"), ("1", "#051F38", "1")], 186, 54, 150)
-         + lingrad_a("cyL", [("0", "#6E8B4A", "1"), (".6", "#A9A36A", "1"), ("1", "#D6C894", "1")], x2="1", y2="1")
-         + radgrad("cyH", [("0", "#FFFFFF", ".55"), (".55", "#E0F2FE", ".18"), ("1", "#E0F2FE", "0")], 186, 52, 34)
-         + blur_filter("cyB", 1.8)
+         + lingrad("cyO", [("0", "#8FD3E8", "1"), ("1", "#4FA8C6", "1")])
+         + lingrad("cyL", [("0", "#E8D9B5", "1"), ("1", "#D8C193", "1")])
          + "</defs>")
     b = d + rect(0, 0, W, H, "url(#cyO)")
-    land = "M0 0 L176 0 L164 8 L150 13 L138 22 L126 30 L114 38 L102 46 L90 56 L78 66 L64 76 L52 86 L0 86 Z"
-    b += path(land, "url(#cyL)") + path(land, "none", "#F5EBC8", 1.6)
-    b += path("M18 0 Q34 30 20 60 Q14 74 24 86", "none", "#4E6B36", 1.2, ' stroke-opacity=".7"')
-    b += path("M70 0 Q60 20 74 34 Q86 44 80 58", "none", "#4E6B36", 1, ' stroke-opacity=".6"')
-    b += t(24, 24, "ODISHA", 11.5, "#2A2410", 900, "start", 1.6)
-    b += t(24, 35, "~300,000 MOVED", 7.4, "#2A2410", 900, "start", 0.6)
-    b += t(24, 45, "69 TRAINS CANCELLED", 6.4, "#3A3216", 900, "start", 0.4)
-    b += rect(0, 0, W, H, "url(#cyH)")
-    cx, cy = 186, 52
+    land = "M0 0 L58 0 Q52 10 44 16 Q36 22 30 30 Q24 38 16 46 Q10 52 6 58 L0 58 Z"
+    b += path(land, "url(#cyL)") + path(land, "none", "#FDFBF6", 1.2)
+    b += path("M0 0 L44 0 Q40 8 34 12 Q26 18 22 26 Q16 34 12 44 Q8 50 4 58 L0 58 Z",
+              "#7FA35B", extra=' fill-opacity=".55"')
+    b += path("M18 0 Q22 18 14 34 Q10 44 16 58", "none", "#4E6B36", .8, ' stroke-opacity=".6"')
+    cx, cy = 146, 28
+    for rr in (17, 12, 7):
+        b += circle(cx, cy, rr, "none", "#FFFFFF", .8, ' stroke-opacity=".55" stroke-dasharray="2 3"')
     arms = ""
     for k in range(4):
         a0 = k * math.pi / 2
-        pts = [(cx + (3 + i * 1.15) * math.cos(a0 + i * 0.21), cy + (3 + i * 1.15) * math.sin(a0 + i * 0.21))
-               for i in range(22)]
-        arms += path("M" + " L".join("%s %s" % (n(x), n(y)) for x, y in pts), "none", "#FFFFFF", 4.2,
-                     ' stroke-linecap="round"')
-    b += '<g filter="url(#cyB)" opacity=".8">' + arms + "</g>" + '<g opacity=".95">' + arms.replace(
-        'stroke-width="4.2"', 'stroke-width="2"') + "</g>"
-    b += circle(cx, cy, 3.6, "#082F49", "#E0F2FE", 1)
-    b += path("M236 84 Q214 74 200 62", "none", "#FDE68A", 1.6, ' stroke-dasharray="3 3"')
-    b += path("M172 44 Q150 36 128 34", "none", "#FDE68A", 1.6, ' stroke-dasharray="3 3"')
-    b += path("M128 34 L136 30.6 L135 38 Z", "#FDE68A")
-    b += circle(121, 33, 4, "#DC2626", "#FFFFFF", 1.4)
-    b += t(234, 14, "AKVAN", 11, "#FFFFFF", 900, "end", 1.8)
-    b += t(234, 23, "LANDFALL FRI", 6.4, "#FDE68A", 900, "end", 0.8)
-    b += t(118, 80, "BAY OF BENGAL", 6.4, "#BAE6FD", 900, "start", 1.4)
+        pts = [(cx + (2 + i * .85) * math.cos(a0 + i * .22),
+                cy + (2 + i * .85) * math.sin(a0 + i * .22)) for i in range(16)]
+        arms += path("M" + " L".join("%s %s" % (n(x), n(y)) for x, y in pts),
+                     "none", "#FFFFFF", 2.4, ' stroke-linecap="round"')
+    b += arms + circle(cx, cy, 2.8, "#9A1B1F", "#FFFFFF", .8)
+    b += path("M186 52 Q170 40 156 34 Q138 27 118 24", "none", "#FDE68A", 1.4, ' stroke-dasharray="3 2"')
+    b += circle(114, 23, 4.2, "#9A1B1F", "#FFFFFF", 1.2)
+    b += t(10, 14, "ODISHA", 7.4, "#2C313A", 900, "start", 1.2)
+    b += t(184, 10, "AKVAN", 7.4, "#9A1B1F", 900, "end", 1.2)
+    return svg(W, H, b)
+
+
+def art_kyiv():
+    """Kyiv: daylight cathedral, Dutch and Austrian embassy flags, one blast."""
+    W, H = 190, 58
+    d = ("<defs>"
+         + lingrad("kvS", [("0", "#C7DFEF", "1"), (".7", "#E8F3FA", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("kvD", [("0", "#7FA07F", "1"), ("1", "#4E7358", "1")])
+         + "</defs>")
+    b = d + rect(0, 0, W, H, "url(#kvS)")
+    b += circle(164, 10, 6, "#FFE7A0", extra=' fill-opacity=".6"') + circle(164, 10, 4, "#FFF3C4")
+    for x, r in ((8, 5), (20, 6), (36, 5), (58, 4), (120, 5), (136, 4), (178, 5)):
+        b += circle(x, 50, r, "#5E8F62", extra=' fill-opacity=".8"')
+    b += rect(54, 32, 64, 20, "#F3E4C4") + rect(72, 24, 28, 10, "#F3E4C4")
+    for cx, cy, r in ((88, 18, 6.5), (62, 29, 4), (78, 24, 4.4), (98, 24, 4.4), (114, 29, 4)):
+        b += rect(cx - r * .8, cy + r * .4, r * 1.6, 52 - cy - r * .4, "#F3E4C4")
+        b += path("M%s %s Q%s %s %s %s Q%s %s %s %s Z" % (
+            n(cx - r), n(cy + r * .6), n(cx - r), n(cy - r), n(cx), n(cy - r * 1.5),
+            n(cx + r), n(cy - r), n(cx + r), n(cy + r * .6)), "url(#kvD)")
+        b += rect(cx - .4, cy - r * 1.5 - 3.4, .8, 3.4, "#C9971F")
+        b += rect(cx - 1.3, cy - r * 1.5 - 2.4, 2.6, .7, "#C9971F")
+    b += rect(2, 40, 38, 14, "#F7EDD8", 1, "#C9B183", .6)
+    b += rect(150, 40, 38, 14, "#F7EDD8", 1, "#C9B183", .6)
+    b += windows(5, 43, 7, 2, 5, 5, 2, 2.2, "#8A7856", 3, .7)
+    b += windows(153, 43, 7, 2, 5, 5, 2, 2.2, "#8A7856", 7, .7)
+    b += rect(18, 28, .8, 12, "#8A8272") + rect(19, 28, 10, 2.4, "#AE1C28")
+    b += rect(19, 30.4, 10, 2.4, "#FFFFFF") + rect(19, 32.8, 10, 2.4, "#21468B")
+    b += rect(168, 28, .8, 12, "#8A8272") + rect(169, 28, 10, 2.4, "#C8102E")
+    b += rect(169, 30.4, 10, 2.4, "#FFFFFF") + rect(169, 32.8, 10, 2.4, "#C8102E")
+    b += path(burst_d(146, 36, 6.5, .5, 11), "#EA580C") + path(burst_d(146, 36, 3.6, .6, 9), "#FEF08A")
+    b += t(8, 12, "KYIV", 7.4, "#2C313A", 900, "start", 1.4)
     return svg(W, H, b)
 
 
 def art_riyadh():
-    W, H = 240, 86
+    """Riyadh: bright desert daylight, PIF tower hit, Kingdom Centre behind."""
+    W, H = 190, 58
     d = ("<defs>"
-         + lingrad_a("rS", [("0", "#060A1E", "1"), (".6", "#1E1A46", "1"), ("1", "#4A2147", "1")])
-         + radgrad("rG", [("0", "#FFB347", ".95"), (".25", "#FF7A2F", ".45"), ("1", "#FF5A1F", "0")], 124, 26, 60)
-         + lingrad_a("rT", [("0", "#2B3A66", "1"), (".5", "#4F6AAE", "1"), ("1", "#1A2444", "1")], x2="1", y2="0")
-         + lingrad_a("rM", [("0", "#FDE68A", "0"), ("1", "#FDBA74", "1")], x2="1", y2="0")
-         + blur_filter("rB", 1.8)
+         + lingrad("ryS", [("0", "#C7E4F4", "1"), (".65", "#E8F3F8", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("ryT", [("0", "#8FC3DD", "1"), ("1", "#4E8FB0", "1")], x2="1", y2="0")
          + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#rS)") + rect(0, 0, W, H, "url(#rG)")
-    for x, y in ((14, 8), (40, 20), (66, 6), (196, 10), (222, 28), (170, 4), (28, 36), (90, 12)):
-        b += circle(x, y, 0.85, "#FFFFFF", extra=' fill-opacity=".8"')
-    # smoke drifting left from the hit
-    for cx, cy, r, a in ((112, 22, 8, .5), (100, 18, 9, .42), (86, 15, 8, .34), (72, 13, 6, .26)):
-        b += circle(cx, cy, r, "#57534E", extra=' fill-opacity="%s" filter="url(#rB)"' % n(a))
-    sky = "#04060F"
-    for x, w, h in ((0, 16, 20), (14, 14, 30), (30, 18, 16), (48, 14, 26), (64, 16, 34), (82, 14, 20),
-                    (140, 16, 26), (156, 14, 18), (204, 16, 30), (222, 18, 22)):
-        b += rect(x, 76 - h, w, h, sky)
-        b += windows(x + 2, 79 - h, int((w - 3) // 4), int((h - 4) // 4), 4, 4, 1.5, 1.5, "#FCD34D", x, 0.35)
-    # Kingdom Centre (bottle-opener crown)
-    b += path("M174 76 L176 30 Q186 16 196 30 L198 76 Z M180 40 Q186 26 192 40 L192 34 Q186 22 180 34 Z",
-              sky, extra=' fill-rule="evenodd"')
-    b += path("M180 40 Q186 28 192 40 Z", "url(#rS)")
-    b += windows(177, 44, 5, 8, 4, 4, 1.5, 1.5, "#FCD34D", 44, 0.4)
-    # PIF tower: tapered glass faces, damaged upper floors
-    b += path("M110 76 L112 20 L118 6 L124 4 L130 6 L134 20 L136 76 Z", "url(#rT)", "#7C93D0", 0.8)
-    b += line(123, 5, 123, 76, "#8FA6E0", 0.5, extra=' stroke-opacity=".6"')
-    for y in range(24, 74, 5):
-        b += line(113, y, 135, y, "#9DB4EE", 0.5, extra=' stroke-opacity=".55"')
-    for y, w in ((24, 18), (29, 16), (34, 12)):
-        b += rect(124 - w / 2.0, y, w, 2.6, "#FF8A3D", extra=' fill-opacity=".9"')
-    b += path(burst_d(124, 26, 16, 0.5), "#EA580C") + path(burst_d(124, 26, 11, 0.55, 11), "#FB923C")
-    b += path(burst_d(124, 26, 6.5, 0.6, 9), "#FEF08A")
-    b += path("M236 3 L140 21", "none", "url(#rM)", 2)
-    b += rect(0, 76, W, 10, "#020308")
-    b += t(6, 84, "RIYADH &#183; PIF TOWER", 6.8, "#FDE68A", 900, "start", 1.2)
-    b += t(236, 84, "TALLEST IN RIYADH", 6.8, "#CBD5E1", 900, "end", 0.8)
+    b = d + rect(0, 0, W, H, "url(#ryS)")
+    b += circle(22, 11, 6, "#FFE7A0", extra=' fill-opacity=".65"') + circle(22, 11, 4, "#FFF3C4")
+    for x, w, h in ((0, 14, 10), (14, 10, 16), (26, 14, 8), (44, 10, 13), (60, 14, 9),
+                    (150, 12, 12), (164, 14, 8), (180, 10, 15)):
+        b += rect(x, 50 - h, w, h, "#C3D5DF")
+    b += path("M0 48 Q48 45 96 48 Q146 51 190 47 L190 58 L0 58 Z", "#E8D5A9")
+    b += path("M108 48 L110 14 L114 8 L122 6 L126 8 L128 14 L130 48 Z", "url(#ryT)", "#2C313A", .7)
+    b += line(119, 7, 119, 48, "#FDFBF6", .5, ' stroke-opacity=".7"')
+    for y in range(16, 46, 5):
+        b += line(111, y, 127, y, "#FDFBF6", .4, ' stroke-opacity=".65"')
+    b += path(burst_d(119, 15, 8, .5, 11), "#EA580C") + path(burst_d(119, 15, 4.6, .55, 9), "#FEF08A")
+    for cx, cy, r in ((104, 10, 4), (98, 7, 3), (94, 4, 2)):
+        b += circle(cx, cy, r, "#9AA5A8", extra=' fill-opacity=".55"')
+    b += path("M148 48 L150 26 Q158 14 166 26 L168 48 Z M153 30 Q158 20 163 30 L163 27 Q158 17 153 27 Z",
+              "#C3D5DF", extra=' fill-rule="evenodd"')
+    b += windows(112, 20, 4, 5, 4, 5, 1.4, 1.6, "#FDFBF6", 4, .55)
+    b += t(8, 12, "RIYADH", 7.4, "#2C313A", 900, "start", 1.2)
+    b += t(8, 54, "PIF TOWER", 6.2, "#2C313A", 900, "start", 1.0)
     return svg(W, H, b)
 
 
-# ------------------------------------------------------- row 2 art (190x64)
-
-def art_kyiv():
-    W, H = 190, 64
+def art_gta():
+    """Worldwide: the one twilight card, a neon Vice-coast sunset."""
+    W, H = 190, 58
     d = ("<defs>"
-         + lingrad_a("kS", [("0", "#475569", "1"), (".6", "#94A3B8", "1"), ("1", "#E2E8F0", "1")])
-         + radgrad("kG", [("0", "#FDBA74", ".9"), (".4", "#F97316", ".35"), ("1", "#F97316", "0")], 150, 40, 30)
-         + lingrad_a("kD", [("0", "#FDE68A", "1"), ("1", "#B7791F", "1")])
-         + blur_filter("kB", 1.5)
+         + lingrad("gtS", [("0", "#2A1450", "1"), (".38", "#6B2A68", "1"), (".68", "#C2417A", "1"),
+                           (".88", "#FF9E5E", "1"), ("1", "#FFD08A", "1")])
+         + lingrad("gtSea", [("0", "#5B2A6A", "1"), ("1", "#240B3A", "1")])
+         + radgrad("gtSun", [("0", "#FFF4C2", "1"), (".55", "#FFC15E", "1"), ("1", "#FF7A6A", "1")], 120, 30, 15)
          + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#kS)") + rect(0, 0, W, H, "url(#kG)")
-    for cx, cy, r, a in ((150, 30, 7, .6), (144, 20, 8, .5), (136, 11, 7, .4)):
-        b += circle(cx, cy, r, "#334155", extra=' fill-opacity="%s" filter="url(#kB)"' % n(a))
-    # St Volodymyr's Cathedral: ochre walls, dark domes with gilt crosses
-    wall = "#D9B45A"
-    b += rect(50, 40, 80, 24, wall) + rect(78, 28, 24, 14, wall)
-    for cx, cy, r in ((90, 20, 8.5), (60, 33, 5.5), (120, 33, 5.5), (76, 28, 4.5), (104, 28, 4.5)):
-        b += rect(cx - r * 0.8, cy + r * 0.4, r * 1.6, 64 - cy - r * 0.4, wall)
-        b += path("M%s %s Q%s %s %s %s Q%s %s %s %s Z" % (
-            n(cx - r), n(cy + r * 0.6), n(cx - r), n(cy - r), n(cx), n(cy - r * 1.5), n(cx + r), n(cy - r),
-            n(cx + r), n(cy + r * 0.6)), "#1F2937")
-        b += path("M%s %s Q%s %s %s %s" % (n(cx - r * 0.5), n(cy), n(cx - r * 0.3), n(cy - r * 0.9),
-                                          n(cx), n(cy - r * 1.3)), "none", "#94A3B8", 0.7)
-        b += rect(cx - 0.5, cy - r * 1.5 - 5, 1, 5, "url(#kD)") + rect(cx - 1.8, cy - r * 1.5 - 3.8, 3.6, 0.9, "url(#kD)")
-    for x in (56, 68, 84, 96, 112, 124):
-        b += path("M%s 60 L%s 50 Q%s 47 %s 50 L%s 60 Z" % (x, x, x + 2, x + 4, x + 4), "#7C5A1E")
-    # embassy blocks with the Dutch and Austrian flags
-    b += rect(4, 44, 40, 20, "#334155") + rect(140, 46, 46, 18, "#334155")
-    b += windows(7, 47, 9, 3, 4, 5, 2, 2.6, "#CBD5E1", 3, 0.7) + windows(143, 49, 11, 3, 4, 5, 2, 2.6, "#CBD5E1", 9, 0.7)
-    b += rect(20, 30, 1, 14, "#E5E7EB") + rect(21, 30, 12, 2.7, "#AE1C28") + rect(21, 32.7, 12, 2.7, "#FFFFFF") \
-        + rect(21, 35.4, 12, 2.7, "#21468B")
-    b += rect(170, 32, 1, 14, "#E5E7EB") + rect(171, 32, 12, 2.7, "#C8102E") + rect(171, 34.7, 12, 2.7, "#FFFFFF") \
-        + rect(171, 37.4, 12, 2.7, "#C8102E")
-    b += path(burst_d(156, 42, 9.5, 0.5), "#EA580C") + path(burst_d(156, 42, 6, 0.55, 11), "#FB923C")
-    b += path(burst_d(156, 42, 3.4, 0.6, 9), "#FEF08A")
-    for x, y in ((40, 10), (122, 8), (170, 16), (58, 18)):
-        b += path("M%s %s L%s %s L%s %s L%s %s Z" % (x, y, x + 12, y - 3.4, x + 9, y, x + 12, y + 3.4), "#0F172A")
-        b += line(x + 12, y, x + 18, y, "#0F172A", 0.6, "1.5 1.5")
-    b += t(4, 11, "KYIV", 8, "#0F172A", 900, "start", 1.6)
+    b = d + rect(0, 0, W, H, "url(#gtS)")
+    b += circle(120, 30, 15, "url(#gtSun)")
+    for i, y in enumerate((27, 30, 33, 36)):
+        b += rect(105, y, 30, 1 + i * .35, "#C2417A", extra=' fill-opacity=".8"')
+    for x, w, h in ((0, 12, 10), (12, 9, 16), (22, 13, 8), (36, 8, 13), (46, 11, 9),
+                    (140, 10, 14), (151, 13, 9), (165, 8, 16), (174, 9, 11)):
+        b += rect(x, 38 - h, w, h, "#3A1454")
+    b += line(44, 29, 52, 29, "#FF6FE0", .7) + line(150, 27, 158, 27, "#FF6FE0", .7)
+    b += rect(0, 38, W, 5, "url(#gtSea)")
+    for x, w in ((104, 18), (112, 26), (120, 14), (150, 16)):
+        b += rect(x, 40.5, w, .6, "#FFC36B", extra=' fill-opacity=".55"')
+    b += rect(0, 43, W, 15, "#1C0838")
+    b += path("M86 43 L70 58 L76 58 L90 43 Z", "#5B1B78", extra=' fill-opacity=".55"')
+    b += path("M92 43 L112 58 L118 58 L96 43 Z", "#5B1B78", extra=' fill-opacity=".55"')
+    b += line(90, 43, 78, 58, "#FF3FD8", .9) + line(92, 43, 104, 58, "#FF3FD8", .9)
+    b += palm(18, 58, 40, -4, "#1A0730", .75) + palm(30, 58, 26, 3, "#240A3E", .55)
+    b += palm(168, 58, 36, 5, "#1A0730", .7) + palm(180, 58, 24, 2, "#240A3E", .5)
+    b += path("M70 52 L76 48 Q84 46 94 45 L102 42 Q112 39 122 42 L130 45 Q138 47 142 50 L143 52 Z",
+              "#12041F")
+    b += path("M76 48 Q84 46 94 45 L102 42 Q112 39 122 42 L130 45 Q138 47 142 50", "none", "#FF7BE8", .9)
+    b += circle(82, 52, 3.6, "#05010C", "#A855F7", .9) + circle(82, 52, 1.5, "#A855F7")
+    b += circle(132, 52, 3.6, "#05010C", "#A855F7", .9) + circle(132, 52, 1.5, "#A855F7")
+    b += rect(71, 49, 4, 1.4, "#FF2D55", 1)
+    b += rect(150, 7, 34, 20, "#15803D", 2, "#BBF7D0", .8)
+    b += t(167, 19, "99", 10.4, "#FFFFFF", 900, "middle", -.2)
+    b += t(167, 26.2, "SCORE", 4.3, "#DCFCE7", 900, "middle", .7)
+    return svg(W, H, b)
+
+
+def art_berlin():
+    """Berlin: sunlit Brandenburg Gate, EU and German flags, green lawn."""
+    W, H = 190, 58
+    d = ("<defs>"
+         + lingrad("brS", [("0", "#BFDFF2", "1"), (".7", "#E8F4FA", "1"), ("1", "#FBF3E2", "1")])
+         + "</defs>")
+    b = d + rect(0, 0, W, H, "url(#brS)")
+    b += circle(160, 10, 6, "#FFE7A0", extra=' fill-opacity=".6"') + circle(160, 10, 4, "#FFF3C4")
+    b += rect(0, 50, W, 8, "#7FA36B")
+    b += rect(36, 44, 120, 6, "#D8C193")
+    for x in range(42, 150, 14):
+        b += rect(x, 26, 7, 18, "#F0DEB8") + rect(x + 6, 26, 1, 18, "#C9B183")
+    b += rect(38, 20, 116, 7, "#E8D6B0") + rect(38, 20, 116, 1.6, "#C9B183")
+    b += rect(64, 12, 64, 8, "#5C5548")
+    b += path("M72 12 L70 6 L74 4 L78 8 L82 5 L86 9 L90 5 L94 9 L98 4 L102 8 L106 5 L110 9 L114 6 L118 10 L120 12 Z",
+              "#3A342A")
+    for cx in (76, 86, 96, 106):
+        b += circle(cx, 10, 2.2, "#3A342A")
+    b += rect(6, 36, 24, 14, "#1B3F94", 1, "#FDFBF6", .6)
+    for x, y in ((11, 40), (18, 39), (24, 40), (13, 45), (21, 45)):
+        b += path(star_d(x, y, 1.6), "#F5C542")
+    b += rect(160, 36, 24, 4.7, "#1A1A1A") + rect(160, 40.7, 24, 4.7, "#C8102E")
+    b += rect(160, 45.4, 24, 4.6, "#F5C542")
+    b += t(8, 12, "BERLIN", 7.4, "#2C313A", 900, "start", 1.4)
+    return svg(W, H, b)
+
+
+def art_kenya():
+    """Mrima Hill: emerald hills, red earth, a small headframe and truck."""
+    W, H = 190, 58
+    d = ("<defs>"
+         + lingrad("knS", [("0", "#BFE6F3", "1"), (".65", "#E8F7F0", "1"), ("1", "#FBF3E2", "1")])
+         + "</defs>")
+    b = d + rect(0, 0, W, H, "url(#knS)")
+    b += circle(160, 11, 6, "#FFE7A0", extra=' fill-opacity=".65"') + circle(160, 11, 4, "#FFF3C4")
+    b += path("M0 38 Q30 26 58 34 Q90 42 118 30 Q148 20 190 34 L190 58 L0 58 Z", "#8FC79A")
+    b += path("M0 44 Q36 34 72 42 Q108 50 144 38 Q168 31 190 40 L190 58 L0 58 Z", "#4E9A68")
+    b += path("M0 52 Q44 44 92 50 Q140 56 190 48 L190 58 L0 58 Z", "#2F7348")
+    b += path("M98 58 Q96 52 88 48 Q80 44 82 40 L88 40 Q88 44 96 48 Q106 52 108 58 Z", "#B4552F")
+    b += path("M98 58 Q96 52 88 48 Q80 44 82 40", "none", "#D98A5E", .7, ' stroke-opacity=".8"')
+    b += line(64, 50, 70, 26, "#3A342A", 1.6) + line(82, 50, 76, 26, "#3A342A", 1.6)
+    b += line(70, 26, 76, 26, "#3A342A", 1.4) + line(64, 50, 82, 50, "#3A342A", 1.2)
+    for y in (32, 38, 44):
+        b += line(66 + (50 - y) * .18, y, 80 - (50 - y) * .18, y, "#3A342A", .7)
+    b += line(73, 26, 73, 20, "#3A342A", 1) + circle(73, 19, 2, "#C9971F", "#3A342A", .5)
+    b += line(73, 19, 92, 27, "#3A342A", .7)
+    b += rect(118, 46, 18, 6, "#E07A3A", 1) + rect(124, 42, 8, 5, "#F0C27A", 1)
+    b += circle(122, 53, 2, "#2C313A") + circle(132, 53, 2, "#2C313A")
+    b += t(8, 12, "MRIMA HILL", 7.2, "#2C313A", 900, "start", 1.0)
+    return svg(W, H, b)
+
+
+def art_tonga():
+    """Nuku'alofa: turquoise Pacific, white beach, palms, Tongan flag."""
+    W, H = 190, 58
+    d = ("<defs>"
+         + lingrad("tnS", [("0", "#BFE8F7", "1"), (".7", "#E8F9FD", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("tnSea", [("0", "#6FD3DF", "1"), ("1", "#2FB6C9", "1")])
+         + "</defs>")
+    b = d + rect(0, 0, W, H, "url(#tnS)")
+    b += circle(152, 12, 9, "#FFE7A0", extra=' fill-opacity=".55"') + circle(152, 12, 6, "#FFF3C4")
+    b += circle(152, 12, 11.5, "none", "#F5C542", .7, ' stroke-dasharray="1.5 3" stroke-opacity=".65"')
+    b += rect(0, 34, W, 16, "url(#tnSea)")
+    for x, w in ((12, 16), (42, 12), (86, 18), (128, 14), (160, 10)):
+        b += rect(x, 37 + (x % 3), w, .7, "#FFFFFF", extra=' fill-opacity=".6"')
+    b += path("M0 48 Q36 42 76 46 Q120 50 156 46 L156 58 L0 58 Z", "#F7F0DD")
+    b += path("M0 50 Q36 44 76 48 Q120 52 156 48", "none", "#E0D2B4", .8)
+    b += palm(28, 50, 26, -3, "#2F7348", .8) + palm(44, 50, 20, 2, "#3E8E5A", .6)
+    b += palm(70, 50, 23, 3, "#2F7348", .7)
+    b += rect(118, 22, .8, 26, "#8A8272") + rect(119, 22, 18, 11, "#C8102E")
+    b += rect(119, 22, 8, 6, "#FDFBF6")
+    b += rect(121, 23.5, 4, 1, "#C8102E") + rect(122.5, 22, 1, 4, "#C8102E")
+    b += t(8, 12, "NUKU&#8216;ALOFA", 7, "#2C313A", 900, "start", .9)
+    return svg(W, H, b)
+
+
+def art_seoul():
+    """Seoul: a bright court, gold gavel, crimson block, Korean flag."""
+    W, H = 190, 58
+    d = ("<defs>"
+         + lingrad("seS", [("0", "#BFDDF2", "1"), (".7", "#E8F4FA", "1"), ("1", "#FBF3E2", "1")])
+         + lingrad("seG", [("0", "#E8C25C", "1"), ("1", "#B8861E", "1")])
+         + "</defs>")
+    b = d + rect(0, 0, W, H, "url(#seS)")
+    b += circle(168, 9, 6, "#FFE7A0", extra=' fill-opacity=".55"') + circle(168, 9, 4, "#FFF3C4")
+    b += rect(48, 24, 100, 24, "#FDFBF6", 1, "#C9B183", .6)
+    b += rect(84, 28, 28, 20, "#7FB2CF", 1, "#2C313A", .5)
+    b += rect(48, 22, 100, 4, "#E8D6B0")
+    for x in range(54, 84, 10):
+        b += rect(x, 30, 5, 16, "#F0DEB8") + rect(x + 4, 30, 1, 16, "#C9B183")
+    for x in range(116, 146, 10):
+        b += rect(x, 30, 5, 16, "#F0DEB8") + rect(x + 4, 30, 1, 16, "#C9B183")
+    b += rect(44, 48, 108, 3, "#D8C193") + rect(40, 51, 116, 3, "#CBB88F")
+    b += rect(150, 42, 24, 5, "#9A1B1F", 1)
+    b += rect(160, 28, 5, 14, "url(#seG)") + rect(154, 24, 17, 7, "url(#seG)", 1, "#8A6A1A", .5)
+    b += rect(6, 20, 26, 17, "#FDFBF6", 1, "#C9B183", .6)
+    b += circle(19, 28.5, 5, "#C8102E")
+    b += path("M14 28.5 A5 5 0 0 0 24 28.5 Z", "#1B3F94")
+    for x, y in ((9, 23), (29, 23), (9, 34), (29, 34)):
+        b += rect(x - 2, y - .6, 4, 1.2, "#1A1A1A")
+    b += t(8, 12, "SEOUL", 7.4, "#2C313A", 900, "start", 1.4)
+    return svg(W, H, b)
+
+
+def art_paris():
+    """Paris: cream data centre, solar panels, turbine, Eiffel, +70% badge."""
+    W, H = 190, 58
+    d = ("<defs>"
+         + lingrad("prS", [("0", "#D6EAF5", "1"), (".7", "#EEF7FB", "1"), ("1", "#FBF3E2", "1")])
+         + "</defs>")
+    b = d + rect(0, 0, W, H, "url(#prS)")
+    b += circle(170, 10, 6, "#FFE7A0", extra=' fill-opacity=".55"') + circle(170, 10, 4, "#FFF3C4")
+    b += path("M30 52 L37 28 L39 12 L41 28 L48 52 L44 52 L40 34 L36 52 Z", "#8C8273")
+    b += line(39, 16, 39, 30, "#8C8273", 1.2) + line(35, 24, 43, 24, "#8C8273", .9)
+    b += line(33, 38, 45, 38, "#8C8273", .9)
+    b += rect(62, 26, 84, 26, "#FDFBF6", 1, "#C9B183", .6)
+    b += rect(62, 23, 84, 4, "#3E8E5A")
+    for x in range(68, 142, 10):
+        b += rect(x, 30, 6, 10, "#7FB2CF", 1, "#2C313A", .3)
+    b += rect(92, 40, 12, 12, "#E8D6B0", 1, "#C9B183", .4)
+    b += poly([(64, 52), (84, 52), (88, 56), (68, 56)], "#2C6FA6", "#FDFBF6", .4)
+    b += poly([(88, 52), (108, 52), (112, 56), (92, 56)], "#2C6FA6", "#FDFBF6", .4)
+    b += line(154, 52, 154, 32, "#FDFBF6", 1.2)
+    for ang in (-90, 30, 150):
+        a = math.radians(ang)
+        b += line(154, 32, 154 + 10 * math.cos(a), 32 + 10 * math.sin(a), "#FDFBF6", 1)
+    b += rect(144, 6, 40, 20, "#9A1B1F", 2, "#FDFBF6", .7)
+    b += t(164, 17, "+70%", 8.8, "#FDFBF6", 900, "middle", .2)
+    b += t(164, 26, "CO2 BY 2030", 4.5, "#F7E7C2", 900, "middle", .5)
+    b += t(8, 12, "PARIS", 7.4, "#2C313A", 900, "start", 1.4)
     return svg(W, H, b)
 
 
 # --------------------------------------------------------------- the stories
 
 CARDS = [
-    # row 1 - three lead features
-    dict(n=1, reg="AP", place="SHENZHEN", art=art_apec, lon=114.06, lat=22.54, lead=True,
-         h="THREE POWERS, ONE TABLE",
-         p="First-ever Trump&#8211;Xi&#8211;Putin trilateral at APEC ends in a peace declaration: "
-           "nuclear war &#8220;cannot be won&#8221;; omits Ukraine and Iran.",
-         src="BBC &#183; GUARDIAN"),
-    dict(n=2, reg="AM", place="NEW YORK", art=art_anthropic, lon=-74.0, lat=40.71,
-         h="ANTHROPIC JUMPS 17%",
-         p="Record $81bn IPO: ANT peaks at $111.53, near $2tn, and closes at $97.17, up 17%.",
+    # row 1: three lead stories
+    dict(n=1, reg="AP", place="SHENZHEN", beat="SUMMIT", art=art_apec, lon=114.06, lat=22.54, lead=True,
+         h="Trump, Xi and Putin hold first three-way summit",
+         p="First US&#8211;China&#8211;Russia trilateral at APEC issues a Declaration on Peace on nuclear "
+           "risk; Ukraine and Iran omitted.",
+         src="BBC &#183; Guardian"),
+    dict(n=2, reg="GL", place="THE HAGUE", beat="JUSTICE", art=art_icj, lon=4.30, lat=52.08, lead=True,
+         h="World Court convicts Myanmar of Rohingya genocide",
+         p="In a landmark 9&#8211;6 verdict, the ICJ becomes the first court to hold a state liable for "
+           "genocide, ordering reparations.",
+         src="BBC &#183; UN News"),
+    dict(n=3, reg="AM", place="NEW YORK", beat="MARKETS", art=art_anthropic, lon=-74.0, lat=40.71, lead=True,
+         h="Anthropic jumps 17% in record $81bn Nasdaq debut",
+         p="Priced at $83, ticker ANT peaks at $111.53 near a $2tn valuation before closing day one "
+           "at $97.17.",
          src="BBC &#183; ABC &#183; DW"),
-    dict(n=3, reg="GL", place="THE HAGUE", art=art_icj, lon=4.30, lat=52.08,
-         h="ICJ: MYANMAR GENOCIDE",
-         p="UN top court convicts Myanmar of genocide against the Rohingya &#8212; the first such ruling.",
-         src="BBC &#183; UN NEWS"),
-    # row 2 - five crisp features
-    dict(n=4, reg="GL", place="ANTALYA", art=art_cop, lon=30.71, lat=36.90,
-         h="FOSSIL FUELS CUT",
-         p="COP31 draft drops fossil fuels; 35% clean power by 2035.",
-         src="REUTERS &#183; UN NEWS"),
-    dict(n=5, reg="EU", place="KYIV", art=art_kyiv, lon=30.52, lat=50.45,
-         h="KYIV EMBASSIES HIT",
-         p="Drone raid kills 1 and damages Dutch and Austrian embassies in Kyiv.",
-         src="KYIV IND. &#183; BBC"),
-    dict(n=6, reg="ME", place="RIYADH", art=art_riyadh, lon=46.68, lat=24.71,
-         h="PIF TOWER STRUCK",
-         p="Houthi strike damages Riyadh&#8217;s tallest tower and the PIF wealth fund HQ.",
-         src="REUTERS &#183; AL JAZEERA"),
-    dict(n=7, reg="AP", place="ODISHA", art=art_cyclone, lon=84.90, lat=19.27,
-         h="300,000 EVACUATED",
-         p="Odisha moves 300,000 and cancels 69 trains before Friday&#8217;s landfall.",
+    # row 2
+    dict(n=4, reg="GL", place="ANTALYA", beat="CLIMATE", art=art_cop, lon=30.71, lat=36.90,
+         h="COP31 draft drops fossil-fuel phase-out",
+         p="Second text strips fossil-fuel wording; 35% clean electricity by 2035.",
+         src="Reuters &#183; UN News"),
+    dict(n=5, reg="AP", place="ODISHA", beat="STORM", art=art_cyclone, lon=84.90, lat=19.27,
+         h="300,000 evacuated ahead of Cyclone Akvan",
+         p="India cancels 69 trains across coastal Odisha before Friday&#8217;s landfall.",
          src="TNIE &#183; DW"),
-    dict(n=8, reg="GL", place="WORLDWIDE", pin="MIAMI", art=art_gta, lon=-80.19, lat=25.76,
-         h="GTA VI: 99 SCORE",
-         p="99 Metascore beats Zelda&#8217;s record, with $1.5bn+ in pre-sales.",
-         src="BBC &#183; GUARDIAN"),
+    dict(n=6, reg="EU", place="KYIV", beat="WAR", art=art_kyiv, lon=30.52, lat=50.45,
+         h="Drone raid hits Dutch and Austrian embassies",
+         p="Strike kills one in Kyiv; two embassies and a cathedral damaged.",
+         src="Kyiv Ind. &#183; BBC"),
+    dict(n=7, reg="ME", place="RIYADH", beat="GULF", art=art_riyadh, lon=46.68, lat=24.71,
+         h="Houthi strike damages Riyadh&#8217;s PIF Tower",
+         p="Officials report damage to the capital&#8217;s tallest tower, the PIF headquarters.",
+         src="Reuters &#183; Al Jazeera"),
+    dict(n=8, reg="GL", place="WORLDWIDE", pin="MIAMI", beat="GAMES", art=art_gta, lon=-80.19, lat=25.76,
+         h="GTA VI unlocks globally to 99 Metascore",
+         p="After 13 years, launch beats Zelda&#8217;s record with $1.5bn+ in pre-sales.",
+         src="BBC &#183; Guardian"),
+    # row 3
+    dict(n=9, reg="EU", place="BERLIN", beat="EUROPE", art=art_berlin, lon=13.40, lat=52.52,
+         h="European allies set united Russia line",
+         p="Leaders coordinate terms for talks; Macron urges reopening NATO&#8217;s role.",
+         src="DW &#183; France 24"),
+    dict(n=10, reg="AF", place="MRIMA HILL", beat="MINERALS", art=art_kenya, lon=39.25, lat=-4.48,
+         h="Kenya picks US-led $60bn+ niobium bid",
+         p="Frontier Minerals beats seven rivals for the coastal niobium deposit.",
+         src="BBC"),
+    dict(n=11, reg="OC", place="NUKU&#8216;ALOFA", beat="OCEANIA", art=art_tonga, lon=-175.20, lat=-21.14,
+         h="Tonga declares 27-day drought emergency",
+         p="Nationwide El Ni&#241;o order covers all islands and territorial waters.",
+         src="RNZ Pacific"),
+    dict(n=12, reg="AP", place="SEOUL", beat="JUSTICE", art=art_seoul, lon=126.98, lat=37.57,
+         h="Korea top court clears ex-PM Han",
+         p="Supreme Court overturns Han Duck-soo&#8217;s 15-year martial-law conviction.",
+         src="DW"),
+    dict(n=13, reg="GL", place="PARIS", beat="ENERGY", art=art_paris, lon=2.35, lat=48.86,
+         h="IEA warns datacentre CO2 up 70% by 2030",
+         p="Power demand to double on AI growth and fossil plants; IMF sees 4.7%.",
+         src="Guardian &#183; Reuters"),
 ]
 
 DISPATCHES = [
-    # 9-12 Africa
-    ("AF", "KENYA", "Frontier Minerals wins $60bn+ US-led Mrima Hill niobium bid", "BBC"),
-    ("AF", "SUDAN", "UN reports drone strikes have killed 1,630 civilians", "UN NEWS &#183; REUTERS"),
-    ("AF", "SENEGAL", "Faye bypasses parliament to salvage $2.2bn IMF deal", "AFRICANEWS"),
-    ("AF", "SOMALIA", "Mogadishu gives UAE envoy 72 hours to leave the country", "REUTERS"),
-    # 13-14 Oceania
-    ("OC", "TONGA", "27-day national emergency declared over El Ni&#241;o drought", "RNZ PACIFIC"),
+    # 14-23, left column
+    ("AF", "SUDAN", "UN reports drone strikes have killed 1,630 civilians", "UN News &#183; Reuters"),
+    ("AF", "SENEGAL", "Faye bypasses parliament to salvage $2.2bn IMF deal", "Africanews"),
+    ("AF", "SOMALIA", "Mogadishu gives UAE envoy 72 hours to leave", "Reuters"),
+    ("AF", "ZIMBABWE", "250,000 landmines destroyed in Zimbabwe since 2013", "Africanews"),
     ("OC", "COOK ISLANDS", "Nassau placed on alert as Cyclone Xavier slows", "RNZ"),
-    # 15-16 Americas
-    ("AM", "WASHINGTON", "Senate rejects Iran war-powers curb in 51&#8211;48 vote", "AL JAZEERA"),
-    ("AM", "HAITI", "Police raid in Port-au-Prince kills 34 gang members", "AL JAZEERA"),
-    # 17-18 Europe
+    ("OC", "WELLINGTON", "Court rules pay-equity law breached women&#8217;s rights", "RNZ"),
+    ("OC", "NORTHLAND", "Sperm whales die in Ninety Mile Beach stranding", "RNZ"),
+    ("AM", "WASHINGTON", "Senate rejects Iran war-powers curb in 51&#8211;48 vote", "Al Jazeera"),
+    ("AM", "HAITI", "Police raid in Port-au-Prince kills 34 gang members", "Al Jazeera"),
+    ("AM", "SACRAMENTO", "California subpoenas Nvidia in China-chip probe", "BBC"),
+    # 24-33, right column
+    ("AM", "BOSTON", "Judge blocks Trump&#8217;s trans-care curbs on HIV funds", "Reuters"),
     ("EU", "COPENHAGEN", "MPs unanimously ratify US&#8211;Greenland security pact, 109&#8211;0", "DW"),
     ("EU", "BRUSSELS", "Commission reports first AI-driven cyberattack on its network", "DW"),
-    # 19-20 Asia-Pacific / Global
-    ("AP", "SEOUL", "Top court overturns ex-PM Han&#8217;s 15-year martial-law term", "DW"),
-    ("GL", "PARIS", "IEA: datacentre power, CO2 up 70% by 2030 &#183; IMF sees 4.7%", "GUARDIAN &#183; REUTERS"),
+    ("EU", "MOSCOW", "Putin vows &#8216;far more painful&#8217; reply to bridge strikes", "BBC"),
+    ("AP", "DHAKA", "Yunus&#8217;s ancestral home torched before Hasina return", "DW"),
+    ("AP", "PAKISTAN", "Bus hits LPG tanker: 10 dead, 27 hurt", "Al Jazeera"),
+    ("ME", "GAZA", "1/3 of global child violations in Palestinian territory", "Al Jazeera"),
+    ("ME", "LEBANON", "Israel strikes Hezbollah missile site in Bekaa", "Al Jazeera"),
+    ("ME", "IRAN / US", "Trump: &#8216;no rush&#8217; on Iran, will decide in new year", "Reuters"),
+    ("GL", "ATHLETICS", "World marathon champion Jepchirchir banned 3 years", "BBC"),
 ]
 
 NUMBERS = [
-    ("$81BN", "ANTHROPIC IPO", "AM"),
-    ("99", "GTA VI METASCORE", "GL"),
-    ("300K", "ODISHA EVACUATED", "AP"),
-    ("51&#8211;48", "SENATE IRAN VOTE", "AM"),
-    ("4.7%", "IMF INFLATION", "GL"),
+    ("3", "presidents at one table", "AP"),
+    ("9&#8211;6", "World Court genocide vote", "GL"),
+    ("$81bn", "Anthropic record IPO", "AM"),
+    ("300k", "evacuated in Odisha", "AP"),
+    ("109&#8211;0", "Danish Arctic pact vote", "EU"),
+    ("99", "GTA VI Metascore", "GL"),
 ]
 
-DATE_CHECK = (
-    "<b>VERIFIED THU 19 NOV 2026 UTC</b> &#183; Excluded <b>WED 18</b>: Mo&#239;se plot verdict "
-    "&#183; Fed minutes &#183; Van Gogh $190.4m"
+DATE_CHECK_1 = (
+    "<b>DATE CHECK &#10003;</b> Every story on this page happened, or was first reported, on "
+    "<b>Thursday, 19 November 2026 (UTC)</b>."
 )
-
+DATE_CHECK_2 = (
+    "<b>Left out as other days&#8217; news &#8212; WED 18 NOV:</b> Takaichi&#8211;Putin talks "
+    "&#183; Mo&#239;se plot verdict &#183; Gaza &#8216;yellow line&#8217; crossing &#183; "
+    "Jeffries 251&#8211;11 &#183; Van Gogh $190.4m &#183; Fed minutes. "
+    "<b>FRI 20 NOV:</b> Akvan landfall &#183; UK&#8211;EU summit."
+)
 SOURCES = (
-    "BBC &#183; Reuters &#183; Guardian &#183; DW &#183; Al Jazeera &#183; UN News "
-    "&#183; RNZ &#183; Africanews &#183; IEA"
+    "Disputed claims attributed, not stated as fact &#183; Original illustrations and Natural Earth "
+    "map drawn in code &#183; Sources: BBC, Reuters, Guardian, DW, Al Jazeera, UN News, ABC, RNZ, "
+    "Africanews, Kyiv Independent, TNIE, France 24, IEA"
 )
 
-# map badge offsets (px in the 338-wide map) for the eight card pins
+# map badge offsets (px in the 293-wide map) for the thirteen card pins
 BADGES = {
-    1: (303, 99), 2: (79, 46), 3: (153, 30), 4: (204, 94),
-    5: (221, 36), 6: (181, 102), 7: (268, 107), 8: (71, 95),
+    1: (241, 89), 2: (131, 24), 3: (76, 44), 4: (193, 51), 5: (228, 68),
+    6: (183, 31), 7: (197, 80), 8: (68, 78), 9: (157, 23), 10: (166, 97),
+    11: (16, 116), 12: (263, 66), 13: (136, 54),
 }
-MAP_W = 338
+MAP_W = 293
 MAP_SCALE = MAP_W / 1000.0
 MAP_H = round(486.99 * MAP_SCALE, 1)
-PIN_R = 8.5
+PIN_R = 7.5
 
 
 def miller(lat):
@@ -782,11 +796,14 @@ def region_counts():
 
 def world_map_svg():
     land = WORLD_PATH.read_text().strip()
-    b = rect(0, 0, MAP_W, MAP_H, "#E7F0F5")
+    b = rect(0, 0, MAP_W, MAP_H, "#DCE9F2")
     for lat in (60, 30, 0, -30):
         y = project(0, lat)[1]
-        b += line(0, y, MAP_W, y, "#C9DCE7", 0.6, "2 3" if lat else None)
-    b += ('<g transform="scale(%.4f)"><path d="%s" fill="#EEE5D0" stroke="#A2906B" '
+        b += line(0, y, MAP_W, y, "#C4DCE8", .55, "2 3" if lat == 0 else None)
+    for lon in (-120, -60, 0, 60, 120):
+        x = project(lon, 0)[0]
+        b += line(x, 0, x, MAP_H, "#C4DCE8", .45)
+    b += ('<g transform="scale(%.5f)"><path d="%s" fill="#E6DCC5" stroke="#B9A883" '
           'stroke-width="2.2" stroke-linejoin="round"/></g>' % (MAP_SCALE, land))
     leaders, dots, badges = "", "", ""
     for c in CARDS:
@@ -795,12 +812,12 @@ def world_map_svg():
         bx, by = BADGES[c["n"]]
         dx, dy = bx - x, by - y
         dist = math.hypot(dx, dy) or 1
-        ex, ey = bx - dx / dist * (PIN_R + 1.6), by - dy / dist * (PIN_R + 1.6)
-        leaders += line(x, y, ex, ey, ink, 1)
+        ex, ey = bx - dx / dist * (PIN_R + 1.8), by - dy / dist * (PIN_R + 1.8)
+        leaders += line(x, y, ex, ey, ink, .9, extra=' stroke-opacity=".9"')
         dots += circle(x, y, 2.4, fill, "#FFFFFF", 1, ' class="pin-dot"')
         badges += ('<g class="pin-badge" data-n="%d">' % c["n"]
                    + circle(bx, by, PIN_R, ink, "#FFFFFF", 1.3)
-                   + t(bx, by + 3.5, str(c["n"]), 10, "#FFFFFF", 900, "middle")
+                   + t(bx, by + 3.3, str(c["n"]), 9, "#FFFFFF", 900, "middle")
                    + "</g>")
     b += leaders + dots + badges
     return svg(MAP_W, MAP_H, b, "map-svg")
@@ -810,110 +827,118 @@ def world_map_svg():
 
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:1024px;height:1024px;overflow:hidden;background:#FAF8F4;}
-body{font-family:Lato,sans-serif;color:#111827;-webkit-font-smoothing:antialiased;}
-.page{position:relative;width:1024px;height:1024px;overflow:hidden;background:#FAF8F4;}
-.rule-top{position:absolute;left:16px;right:16px;top:6px;height:3px;background:#111827;}
-.dateline{position:absolute;left:14px;top:9px;height:62px;line-height:60px;font-weight:900;
- font-size:52px;letter-spacing:-1.6px;white-space:nowrap;color:#111827;}
-.dateline .d{color:#B91C1C;}
-.edition{position:absolute;right:16px;top:12px;width:212px;height:52px;border:2px solid #111827;
- background:#FFFFFF;text-align:center;padding-top:4px;}
-.edition div{white-space:nowrap;}
-.edition .e1{font-weight:900;font-size:7.6px;letter-spacing:1.5px;line-height:11px;color:#374151;}
-.edition .e2{font-weight:900;font-size:15px;letter-spacing:1.1px;line-height:17px;color:#111827;}
-.edition .e3{font-weight:900;font-size:7.4px;letter-spacing:.6px;line-height:12px;color:#991B1B;}
-.regionbar{position:absolute;left:16px;right:16px;top:72px;height:18px;display:flex;gap:2px;}
-.seg{flex:1 1 0;height:18px;line-height:18px;color:#FFFFFF;font-weight:900;font-size:8.6px;
- letter-spacing:.6px;text-align:center;white-space:nowrap;overflow:hidden;}
-.seg b{font-weight:900;margin-left:5px;padding:0 4px;background:rgba(0,0,0,.28);border-radius:2px;}
-.numbers{position:absolute;left:16px;right:16px;top:93px;height:26px;display:flex;
- border-top:1px solid #111827;border-bottom:2px solid #111827;background:#FFFFFF;}
-.numbers .lab{flex:none;background:#111827;color:#FAF8F4;font-weight:900;font-size:8.4px;
- letter-spacing:1.4px;line-height:23px;padding:0 10px;white-space:nowrap;}
-.cell{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
- border-left:1px solid #DCD3C2;overflow:hidden;}
-.cell:first-of-type{border-left:none;}
-.cell .v{font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.2px;line-height:18px;}
-.cell .k{font-weight:900;font-size:7.4px;letter-spacing:.5px;color:#374151;line-height:10px;}
+html,body{width:1024px;height:1024px;overflow:hidden;background:#F6F1E6;}
+body{font-family:Lato,sans-serif;color:#141923;-webkit-font-smoothing:antialiased;}
+.page{position:relative;width:1024px;height:1024px;overflow:hidden;background:#F6F1E6;}
+.toprule{position:absolute;left:16px;right:16px;top:8px;height:2px;background:#9A1B1F;}
+.kicker{position:absolute;left:16px;right:16px;top:12px;height:11px;display:flex;
+ align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden;}
+.kicker .kl{font-weight:900;font-size:7.5px;letter-spacing:1.7px;color:#9A1B1F;line-height:11px;}
+.kicker .kr{font-weight:700;font-size:7.1px;letter-spacing:.7px;color:#4A4438;line-height:11px;}
+.masthead{position:absolute;left:16px;right:16px;top:23px;height:59px;font-family:Liberation Serif,DejaVu Serif,Georgia,serif;
+ font-weight:700;font-size:54px;line-height:59px;letter-spacing:-1.2px;color:#141923;white-space:nowrap;overflow:hidden;}
+.deck{position:absolute;left:16px;right:16px;top:83px;height:16px;font-family:Liberation Serif,DejaVu Serif,Georgia,serif;
+ font-style:italic;font-weight:400;font-size:13.3px;line-height:16px;letter-spacing:.05px;color:#9A1B1F;
+ white-space:nowrap;overflow:hidden;}
+.mastrule{position:absolute;left:16px;right:16px;top:101px;height:1.5px;background:#2C313A;}
+.regionbar{position:absolute;left:16px;right:16px;top:105px;height:18px;display:flex;background:#EFE8D8;}
+.seg{flex:1 1 0;height:18px;display:flex;align-items:center;justify-content:center;gap:5px;
+ border-left:1px solid #C9BFA9;white-space:nowrap;overflow:hidden;}
+.seg:first-child{border-left:none;}
+.seg i{flex:none;width:6px;height:6px;background:var(--fill);}
+.seg .lab{font-weight:700;font-size:7.2px;letter-spacing:.55px;color:#2C313A;line-height:10px;}
+.seg .ct{font-weight:900;font-size:8.8px;color:var(--ink);line-height:10px;}
+.stats{position:absolute;left:16px;right:16px;top:127px;height:32px;display:flex;background:#EFE8D8;
+ border-top:1px solid #C9BFA9;border-bottom:1px solid #C9BFA9;}
+.stats .cell{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
+ border-left:1px solid #C9BFA9;overflow:hidden;}
+.stats .cell:first-child{border-left:none;}
+.stats .v{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:15.5px;
+ color:var(--ink);line-height:17px;letter-spacing:-.2px;}
+.stats .k{font-weight:700;font-size:6.8px;letter-spacing:.45px;text-transform:uppercase;color:#4A4438;line-height:9px;}
 .row{position:absolute;left:16px;width:992px;display:grid;}
-.r1{top:127px;height:218px;grid-template-columns:repeat(3,324px);column-gap:10px;}
-.r2{top:353px;height:154px;grid-template-columns:repeat(5,192px);column-gap:8px;}
-.card{position:relative;background:#FFFFFF;border:1px solid #D6CCBA;border-top:3px solid var(--fill);
+.r1{top:165px;height:214px;grid-template-columns:repeat(3,324px);column-gap:10px;}
+.r2{top:387px;height:133px;grid-template-columns:repeat(5,192px);column-gap:8px;}
+.r3{top:524px;height:133px;grid-template-columns:repeat(5,192px);column-gap:8px;}
+.card{position:relative;background:#FDFBF6;border:1px solid #C9BFA9;border-top:2px solid var(--ink);
  display:flex;flex-direction:column;overflow:hidden;}
-.art{flex:none;overflow:hidden;border-bottom:1px solid #E6DDCD;}
+.art{flex:none;overflow:hidden;border-bottom:1px solid #DED3BE;background:#FBF7EE;}
 .art svg{display:block;width:100%;height:100%;}
-.r1 .art{height:118px;}.r2 .art{height:68px;}
+.r1 .art{height:102px;}
+.r2 .art,.r3 .art{height:58px;}
 .body{flex:1;display:flex;flex-direction:column;min-height:0;}
-.r1 .body{padding:0 11px 5px;}.r2 .body{padding:0 8px 4px;}
-.kick{display:flex;align-items:center;gap:5px;white-space:nowrap;flex:none;overflow:hidden;}
+.r1 .body{padding:3px 10px 4px;}
+.r2 .body,.r3 .body{padding:2px 7px 2px;}
+.kick{display:flex;align-items:center;gap:4px;white-space:nowrap;flex:none;overflow:hidden;}
 .badge{flex:none;display:inline-block;background:var(--ink);color:#FFFFFF;font-weight:900;
- text-align:center;border-radius:2px;}
-.kick .rg{font-weight:900;color:var(--ink);}
-.kick .pl{font-weight:900;color:#374151;}
-.lead{flex:none;font-weight:900;font-size:7px;letter-spacing:.8px;color:#FFFFFF;background:#B91C1C;
- padding:2px 4px;border-radius:2px;line-height:9px;}
-.card h2{font-weight:900;color:#111827;white-space:nowrap;flex:none;overflow:hidden;}
-.card p{color:#1F2937;flex:none;overflow:hidden;}
-.src{margin-top:auto;border-top:1px solid #E6DDCD;font-weight:900;color:#374151;white-space:nowrap;
- flex:none;overflow:hidden;display:flex;justify-content:space-between;}
-.src .dt{color:#6B7280;}
-.r1 .kick{margin-top:5px;height:16px;}
-.r1 .badge{width:16px;height:16px;line-height:16px;font-size:10px;}
-.r1 .kick .rg,.r1 .kick .pl{font-size:8.8px;letter-spacing:.7px;}
-.r1 h2{margin-top:3px;font-size:21px;line-height:24px;letter-spacing:-.35px;}
-.r1 p{margin-top:3px;font-size:10.5px;line-height:13.4px;height:26.8px;}
-.r1 .src{font-size:7.8px;letter-spacing:.7px;padding-top:3px;line-height:9px;}
-.r2 .kick{margin-top:4px;height:13px;}
-.r2 .badge{width:13px;height:13px;line-height:13px;font-size:8.6px;}
-.r2 .kick .rg,.r2 .kick .pl{font-size:7.8px;letter-spacing:.35px;}
-.r2 h2{margin-top:2px;font-size:16.5px;line-height:18.5px;letter-spacing:-.3px;}
-.r2 p{margin-top:2px;font-size:10.5px;line-height:13px;height:26px;}
-.r2 .src{font-size:7px;letter-spacing:.4px;padding-top:2px;line-height:8px;}
-.panel{position:absolute;top:517px;height:463px;background:#FFFFFF;border:1px solid #D6CCBA;
- border-top:3px solid #111827;overflow:hidden;}
-.mappanel{left:16px;width:356px;padding:0 7px;display:flex;flex-direction:column;}
-.digest{left:380px;width:636px;padding:0 11px;display:flex;flex-direction:column;}
-.pcap{height:26px;display:flex;justify-content:space-between;align-items:center;white-space:nowrap;
- border-bottom:1px solid #E6DDCD;overflow:hidden;flex:none;}
-.pcap .l{font-weight:900;font-size:9.6px;letter-spacing:1.6px;color:#111827;}
-.pcap .r{font-weight:900;font-size:7.4px;letter-spacing:.6px;color:#374151;}
-.mapbox{margin-top:8px;width:340px;border:1px solid #A9BCCB;flex:none;}
-.map-svg{display:block;width:338px;}
-.legend{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;column-gap:12px;row-gap:2px;flex:none;}
-.lg{display:flex;align-items:center;gap:5px;height:15px;white-space:nowrap;overflow:hidden;}
-.lg i{flex:none;width:10px;height:10px;background:var(--fill);border-radius:1px;}
-.lg .nm{font-weight:900;font-size:8.2px;letter-spacing:.5px;color:var(--ink);}
-.lg .ct{margin-left:auto;font-weight:900;font-size:8.6px;color:#111827;}
-.pinkey{margin-top:10px;border-top:1px solid #E6DDCD;padding-top:5px;display:flex;flex-direction:column;
- flex:1;min-height:0;}
-.pk{flex:1 1 0;min-height:0;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;}
-.pk b{flex:none;width:14px;height:13px;line-height:13px;font-size:8px;text-align:center;color:#FFFFFF;
- background:var(--ink);border-radius:2px;font-weight:900;}
-.pk span{font-weight:900;font-size:7.8px;letter-spacing:.4px;color:#1F2937;}
-.pk .rg{margin-left:auto;font-weight:900;font-size:7px;letter-spacing:.4px;color:var(--ink);}
-.mnote{margin-top:auto;padding-top:4px;border-top:1px solid #E6DDCD;font-weight:900;font-size:7.2px;
- letter-spacing:.5px;color:#374151;white-space:nowrap;overflow:hidden;}
-.cols{margin-top:4px;display:flex;flex-direction:column;flex:1;min-height:0;}
-.dl{flex:1 1 0;min-height:0;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;
- border-bottom:1px dotted #DCD3C2;}
+ text-align:center;border-radius:1px;}
+.kick .rgd{flex:none;width:4px;height:4px;background:var(--fill);}
+.kick .pl{font-weight:900;color:var(--ink);}
+.kick .sep{color:#8A8070;}
+.kick .bt{font-weight:700;color:#3A342A;}
+.r1 .kick{height:15px;margin-bottom:2px;}
+.r1 .badge{width:15px;height:15px;line-height:15px;font-size:9px;}
+.r1 .kick .pl,.r1 .kick .bt{font-size:8.2px;letter-spacing:.65px;}
+.r1 .kick .sep{font-size:8px;}
+.r2 .kick,.r3 .kick{height:11px;margin-bottom:1px;}
+.r2 .badge,.r3 .badge{width:11px;height:11px;line-height:11px;font-size:7.4px;}
+.r2 .kick .pl,.r2 .kick .bt,.r3 .kick .pl,.r3 .kick .bt{font-size:7.2px;letter-spacing:.35px;}
+.r2 .kick .sep,.r3 .kick .sep{font-size:7px;}
+.card h2{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;color:#141923;
+ overflow:hidden;flex:none;}
+.r1 h2{font-size:16.6px;line-height:18.4px;height:36.8px;letter-spacing:-.2px;}
+.r2 h2,.r3 h2{font-size:11.7px;line-height:12.4px;height:24.8px;letter-spacing:-.1px;}
+.card h2 sub{font-size:.7em;line-height:0;}
+.card p{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:400;color:#2C313A;
+ overflow:hidden;flex:none;}
+.r1 p{margin-top:2px;font-size:9.8px;line-height:12.1px;height:36.3px;}
+.r2 p,.r3 p{margin-top:1px;font-size:8.9px;line-height:10.2px;height:20.4px;}
+.src{margin-top:auto;border-top:1px solid #E2D8C4;display:flex;justify-content:space-between;
+ font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-style:italic;white-space:nowrap;
+ flex:none;overflow:hidden;color:#6A6254;}
+.r1 .src{font-size:8.2px;line-height:9px;padding-top:2px;}
+.r2 .src,.r3 .src{font-size:7.1px;line-height:7.5px;padding-top:1px;}
+.src .dt{font-family:Lato,Liberation Sans,sans-serif;font-style:normal;font-weight:700;font-size:6.6px;
+ letter-spacing:.35px;color:#6A6254;}
+.panel{position:absolute;top:661px;height:298px;background:#FDFBF6;border:1px solid #C9BFA9;
+ overflow:hidden;}
+.mappanel{left:16px;width:305px;padding:0 4px;display:flex;flex-direction:column;}
+.digest{left:329px;width:679px;padding:0 10px;display:flex;flex-direction:column;}
+.pcap{height:23px;display:flex;justify-content:space-between;align-items:center;white-space:nowrap;
+ border-bottom:1.5px solid #2C313A;overflow:hidden;flex:none;}
+.pcap .l{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:10px;
+ letter-spacing:1.25px;color:#141923;}
+.pcap .r{font-weight:700;font-size:6.8px;letter-spacing:.45px;color:#6A6254;}
+.mapbox{margin-top:6px;width:295px;border:1px solid #B9C9D3;flex:none;}
+.map-svg{display:block;width:293px;height:142.7px;}
+.legend{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;column-gap:8px;row-gap:0;flex:none;}
+.lg{display:flex;align-items:center;gap:4px;height:13px;white-space:nowrap;overflow:hidden;}
+.lg i{flex:none;width:5px;height:5px;background:var(--fill);}
+.lg .nm{font-weight:700;font-size:7.1px;letter-spacing:.3px;color:#2C313A;line-height:9px;}
+.lg .ct{margin-left:auto;font-weight:900;font-size:8px;color:#141923;line-height:9px;}
+.mnote{margin-top:auto;border-top:1px solid #E2D8C4;padding-top:4px;font-weight:700;font-size:6.6px;
+ letter-spacing:.3px;color:#4A4438;white-space:nowrap;overflow:hidden;flex:none;}
+.cols{margin-top:3px;display:flex;gap:12px;flex:1;min-height:0;}
+.col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;}
+.dl{flex:1 1 0;min-height:0;display:flex;gap:5px;padding:2px 0 1px;border-bottom:1px dotted #D8CDB8;
+ overflow:hidden;}
 .dl:last-child{border-bottom:none;}
-.dl .nb{flex:none;width:20px;height:16px;line-height:16px;text-align:center;font-weight:900;
- font-size:9.4px;color:#FFFFFF;background:var(--ink);border-radius:2px;}
-.dl .tg{flex:none;display:flex;align-items:center;gap:4px;font-weight:900;font-size:9.6px;
- letter-spacing:.3px;color:#111827;}
-.dl .tg .rg{font-size:7.8px;letter-spacing:.6px;color:var(--ink);}
-.dl .tg .sep{font-size:8px;color:#9CA3AF;}
-.dl .tx{flex:none;font-size:12.3px;font-weight:400;color:#111827;}
-.dl .so{margin-left:auto;flex:none;padding-left:6px;font-weight:900;font-size:7px;letter-spacing:.4px;
- color:#4B5563;}
-.footer{position:absolute;left:16px;right:16px;top:984px;height:32px;background:#111827;
- padding:0 12px;display:flex;align-items:center;}
-.f1{font-size:8px;color:#F3EEE4;font-weight:400;white-space:nowrap;overflow:hidden;}
-.f1 .k{font-weight:900;color:#FBBF24;letter-spacing:1px;margin-right:6px;}
-.f1 .s{font-weight:900;color:#FBBF24;letter-spacing:1px;margin-right:6px;}
-.f1 b{font-weight:900;color:#FFFFFF;}
-.f1 .sep{color:#6B7280;margin:0 9px;}
+.dl .nb{flex:none;width:16px;height:13px;line-height:13px;text-align:center;font-weight:900;
+ font-size:8.2px;color:#FFFFFF;background:var(--ink);border-radius:1px;margin-top:1px;}
+.dl .dx{flex:1 1 auto;min-width:0;}
+.dl .dh{height:12px;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;}
+.dl .dh .rgd{flex:none;width:4px;height:4px;background:var(--fill);}
+.dl .dh .pl{font-weight:900;font-size:8.5px;letter-spacing:.5px;color:var(--ink);line-height:11px;}
+.dl .dh .so{margin-left:auto;font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-style:italic;
+ font-weight:400;font-size:7.1px;color:#6A6254;line-height:10px;}
+.dl .tx{font-weight:400;font-size:9.7px;line-height:11px;letter-spacing:.05px;color:#141923;
+ white-space:nowrap;overflow:hidden;height:11px;}
+.datecheck{position:absolute;left:18px;width:988px;top:963px;height:43px;background:#FDFBF6;
+ border:1.5px solid #9A1B1F;padding:5px 10px 4px;overflow:hidden;}
+.datecheck div{white-space:nowrap;overflow:hidden;font-size:8.6px;line-height:13.5px;color:#2C313A;}
+.datecheck b{font-weight:900;color:#9A1B1F;}
+.footer{position:absolute;left:16px;right:16px;top:1009px;height:10px;font-weight:400;font-size:8px;
+ line-height:10px;letter-spacing:.1px;color:#5A5449;white-space:nowrap;overflow:hidden;}
 """
 
 
@@ -924,70 +949,75 @@ def style_vars(reg):
 
 def card_html(c):
     label = REGIONS[c["reg"]][0]
-    lead = '<span class="lead">LEAD</span>' if c.get("lead") else ""
+    lead = " lead" if c.get("lead") else ""
     return (
-        '<section class="card" data-story="c%02d" style="%s">' % (c["n"], style_vars(c["reg"]))
+        '<section class="card%s" data-story="c%02d" data-region="%s" style="%s">'
+        % (lead, c["n"], c["reg"], style_vars(c["reg"]))
         + '<div class="art">%s</div>' % c["art"]()
-        + '<div class="body"><div class="kick"><span class="badge">%d</span>%s'
-          '<span class="rg">%s</span><span class="pl">&#183; %s</span></div>' % (c["n"], lead, label, c["place"])
+        + '<div class="body"><div class="kick"><span class="badge">%d</span>' % c["n"]
+        + '<span class="rgd"></span><span class="pl">%s</span><span class="sep">&#183;</span>'
+          '<span class="bt">%s</span></div>' % (c["place"], c["beat"])
         + '<h2>%s</h2><p>%s</p>' % (c["h"], c["p"])
-        + '<div class="src"><span>[%s]</span><span class="dt">THU 19 NOV</span></div></div>' % c["src"]
-        + "</section>"
+        + '<div class="src"><span>%s</span><span class="dt">THU 19 NOV</span></div></div>'
+          '</section>' % c["src"]
     )
 
 
 def dispatch_html(num, d):
     reg, tag, text, src = d
-    return ('<div class="dl" data-story="d%02d" style="%s"><span class="nb">%d</span>'
-            '<span class="tg"><span class="rg">%s</span><span class="sep">&#183;</span>%s</span>'
-            '<span class="tx">%s</span><span class="so">%s</span></div>'
-            % (num, style_vars(reg), num, REGIONS[reg][0], tag, text, src))
+    return ('<div class="dl" data-story="d%02d" data-region="%s" style="%s">'
+            '<span class="nb">%d</span><div class="dx">'
+            '<div class="dh"><span class="rgd"></span><span class="pl">%s</span>'
+            '<span class="so">%s</span></div>'
+            '<div class="tx">%s</div></div></div>'
+            % (num, reg, style_vars(reg), num, tag, src, text))
 
 
 def build_html():
     counts = region_counts()
     total = sum(counts.values())
     segs = "".join(
-        '<div class="seg" style="background:%s">%s<b>%d</b></div>'
-        % (REGIONS[k][1], REGIONS[k][0], counts[k]) for k in ORDER)
+        '<div class="seg" data-region="%s" data-count="%d" style="%s"><i></i>'
+        '<span class="lab">%s</span><span class="ct">%d</span></div>'
+        % (k, counts[k], style_vars(k), REGIONS[k][0], counts[k]) for k in ORDER)
     nums = "".join(
         '<div class="cell" style="%s"><span class="v">%s</span><span class="k">%s</span></div>'
         % (style_vars(r), v, k) for v, k, r in NUMBERS)
-    rows = [CARDS[0:3], CARDS[3:8]]
+    rows = [CARDS[0:3], CARDS[3:8], CARDS[8:13]]
     rows_html = "".join('<div class="row r%d">%s</div>' % (i + 1, "".join(card_html(c) for c in r))
                         for i, r in enumerate(rows))
     legend = "".join(
         '<div class="lg" style="%s"><i></i><span class="nm">%s</span><span class="ct">%d</span></div>'
         % (style_vars(k), REGIONS[k][0], counts[k]) for k in ORDER)
-    legend += ('<div class="lg" style="--fill:#111827;--ink:#111827"><i></i>'
+    legend += ('<div class="lg" style="--fill:#141923;--ink:#141923"><i></i>'
                '<span class="nm">ALL STORIES</span><span class="ct">%d</span></div>' % total)
-    pinkey = "".join('<div class="pk" style="%s"><b>%d</b><span>%s</span><span class="rg">%s</span></div>'
-                     % (style_vars(c["reg"]), c["n"], c.get("pin", c["place"]),
-                        REGIONS[c["reg"]][0]) for c in CARDS)
-    lines = [dispatch_html(9 + i, d) for i, d in enumerate(DISPATCHES)]
+    left = "".join(dispatch_html(14 + i, d) for i, d in enumerate(DISPATCHES[:10]))
+    right = "".join(dispatch_html(24 + i, d) for i, d in enumerate(DISPATCHES[10:]))
     return (
         '<!doctype html><html><head><meta charset="utf-8">'
-        '<title>THURSDAY, 19 NOVEMBER 2026</title><style>' + CSS + '</style></head><body>'
+        '<title>Thursday, 19 November 2026 &#183; The World Canvas</title>'
+        '<style>' + CSS + '</style></head><body>'
         '<div class="page">'
-        '<div class="rule-top"></div>'
-        '<div class="dateline"><span class="d">THURSDAY,</span> 19 NOVEMBER 2026</div>'
-        '<div class="edition"><div class="e1">THE WORLD CANVAS &#183; LATE FINAL</div>'
-        '<div class="e2">%d STORIES &#183; 7 REGIONS</div>'
-        '<div class="e3">ALL VERIFIED THU 19 NOV 2026</div></div>' % total
-        + '<div class="regionbar">' + segs + '</div>'
-        '<div class="numbers"><div class="lab">DAY IN NUMBERS</div>' + nums + '</div>'
+        '<div class="toprule"></div>'
+        '<div class="kicker"><span class="kl">THE WORLD CANVAS &#183; ONE-PAGE EDITION</span>'
+        '<span class="kr">%d STORIES &#183; 7 REGIONS &#183; ALL VERIFIED THU 19 NOV 2026</span></div>' % total
+        + '<h1 class="masthead">Thursday, 19 November 2026</h1>'
+        '<div class="deck">Trump, Xi and Putin share one table at APEC &#183; World Court convicts '
+        'Myanmar of Rohingya genocide &#183; Record $81bn Anthropic IPO debuts</div>'
+        '<div class="mastrule"></div>'
+        '<div class="regionbar">' + segs + '</div>'
+        '<div class="stats">' + nums + '</div>'
         + rows_html
-        + '<div class="panel mappanel"><div class="pcap"><span class="l">WORLD LOCATOR</span>'
-          '<span class="r">PINS 1&#8211;8 = FEATURES</span></div>'
+        + '<div class="panel mappanel"><div class="pcap"><span class="l">WHERE IT HAPPENED</span>'
+          '<span class="r">PINS 1&#8211;13 &#183; ILLUSTRATED</span></div>'
           '<div class="mapbox">' + world_map_svg() + '</div>'
-          '<div class="legend">' + legend + '</div><div class="pinkey">' + pinkey + '</div>'
-          '<div class="mnote">20 STORIES &#183; 7 REGIONS &#183; ALL THU 19 NOV 2026</div></div>'
-        + '<div class="panel digest"><div class="pcap"><span class="l">WORLD DISPATCHES &#183; 9&#8211;%d</span>'
-          '<span class="r">12 ONE-LINE BRIEFS &#183; EACH FIRST REPORTED THU 19 NOV 2026</span></div>'
-          % (8 + len(DISPATCHES))
-        + '<div class="cols">' + "".join(lines) + '</div></div>'
-        + '<div class="footer"><div class="f1"><span class="k">DATE CHECK</span>' + DATE_CHECK
-        + '<span class="sep">|</span><span class="s">SOURCES</span>' + SOURCES + '</div></div>'
+          '<div class="legend">' + legend + '</div>'
+          '<div class="mnote">Miller projection &#183; Natural Earth 1:110m &#183; pins 1&#8211;13 = illustrated</div></div>'
+        + '<div class="panel digest"><div class="pcap"><span class="l">ALSO ON THURSDAY 19 NOVEMBER 2026</span>'
+          '<span class="r">20 VERIFIED DISPATCHES &#183; THU 19 NOV 2026</span></div>'
+        + '<div class="cols"><div class="col">' + left + '</div><div class="col">' + right + '</div></div></div>'
+        + '<div class="datecheck"><div>' + DATE_CHECK_1 + '</div><div>' + DATE_CHECK_2 + '</div></div>'
+        + '<div class="footer">' + SOURCES + '</div>'
         '</div></body></html>'
     )
 
@@ -997,7 +1027,7 @@ def build_html():
 AUDIT_JS = r"""() => {
   const out = {doc:[document.documentElement.scrollWidth, document.documentElement.scrollHeight],
                issues:[], notes:[]};
-  const add = (m) => { if (out.issues.length < 120) out.issues.push(m); };
+  const add = (m) => { if (out.issues.length < 160) out.issues.push(m); };
   if (out.doc[0] !== 1024 || out.doc[1] !== 1024) add('document ' + out.doc.join('x'));
   const lab = (el) => { const s = el.closest('[data-story]'); return (s ? s.dataset.story + ' ' : '') +
       el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className ? '.' + el.className : '')
@@ -1006,35 +1036,58 @@ AUDIT_JS = r"""() => {
   const inter = (a, b, tol) => !(a.right <= b.left + tol || b.right <= a.left + tol ||
       a.bottom <= b.top + tol || b.bottom <= a.top + tol);
 
-  // census
+  // census and exact region sums
+  const stories = [...document.querySelectorAll('[data-story]')];
   const seen = {};
-  document.querySelectorAll('[data-story]').forEach(el => { seen[el.dataset.story] = (seen[el.dataset.story]||0)+1; });
+  stories.forEach(el => { seen[el.dataset.story] = (seen[el.dataset.story]||0)+1; });
   out.ids = Object.keys(seen).sort();
   Object.keys(seen).filter(k => seen[k] > 1).forEach(k => add('duplicate id ' + k));
+  const counts = {};
+  stories.forEach(el => {
+    const r = el.dataset.region;
+    if (!r) add('missing region ' + el.dataset.story);
+    counts[r] = (counts[r]||0) + 1;
+  });
+  out.total = stories.length;
+  let sum = 0; Object.values(counts).forEach(v => sum += v);
+  if (sum !== 33) add('story total ' + sum);
+  let barSum = 0;
+  document.querySelectorAll('.seg').forEach(s => {
+    const r = s.dataset.region, c = +s.dataset.count; barSum += c;
+    if (counts[r] !== c) add('region ' + r + ' bar ' + c + ' actual ' + (counts[r]||0));
+  });
+  if (barSum !== 33) add('bar total ' + barSum);
+  out.badges = document.querySelectorAll('.pin-badge').length;
+  if (out.badges !== 13) add('map badges ' + out.badges);
 
-  // overflow / wrapping on every text container
-  document.querySelectorAll('.dateline,.edition div,.seg,.numbers .lab,.cell,.kick,.card h2,.card p,.src,' +
-      '.pcap,.lg,.pk,.dl,.footer div,.panel,.card,.art,.mnote').forEach(el => {
+  // overflow / clipped text on every text container
+  document.querySelectorAll('.masthead,.deck,.kicker span,.seg,.stats .cell,.kick,.card h2,.card p,.src,' +
+      '.pcap,.lg,.dl,.dl .dh,.dl .tx,.datecheck div,.footer,.panel,.card,.art,.mapbox,.mnote').forEach(el => {
     if (el.scrollWidth - el.clientWidth > 0.5) add('overflow-x ' + lab(el) + ' +' + (el.scrollWidth - el.clientWidth));
     if (el.scrollHeight - el.clientHeight > 0.5) add('overflow-y ' + lab(el) + ' +' + (el.scrollHeight - el.clientHeight));
   });
-  // card paragraphs: real line count must be <= 2, headline exactly 1
   const lines = (el) => { const r = document.createRange(); r.selectNodeContents(el);
       const ys = new Set(); [...r.getClientRects()].forEach(q => { if (q.width > 1) ys.add(Math.round(q.top)); });
       return ys.size; };
   document.querySelectorAll('.card').forEach(c => {
     const h = c.querySelector('h2'), p = c.querySelector('p');
     const lh = lines(h), lp = lines(p);
+    const maxP = c.classList.contains('lead') ? 3 : 2;
     out.notes.push(c.dataset.story + ' h' + lh + ' p' + lp);
-    if (lh !== 1) add('headline wraps ' + c.dataset.story);
-    if (lp > 2) add('summary >2 lines ' + c.dataset.story + ' (' + lp + ')');
+    if (lh < 1 || lh > 2) add('headline lines ' + c.dataset.story + ' (' + lh + ')');
+    if (lp > maxP) add('summary >' + maxP + ' lines ' + c.dataset.story + ' (' + lp + ')');
     if (lp < 1) add('summary empty ' + c.dataset.story);
   });
   document.querySelectorAll('.dl').forEach(d => {
-    const tx = d.querySelector('.tx'), so = d.querySelector('.so');
+    const tx = d.querySelector('.tx'), so = d.querySelector('.so'), pl = d.querySelector('.pl');
     if (lines(tx) !== 1) add('dispatch wraps ' + d.dataset.story);
-    if (R(tx).right > R(so).left + 0.5) add('dispatch text hits source ' + d.dataset.story);
-    out.notes.push(d.dataset.story + ' slack ' + Math.round(R(so).left - R(tx).right));
+    const tr = document.createRange(); tr.selectNodeContents(tx);
+    const textR = tr.getBoundingClientRect(), boxR = R(tx);
+    const slack = boxR.right - textR.right;
+    if (slack < 1) add('dispatch slack ' + d.dataset.story + ' ' + slack.toFixed(1));
+    if (textR.left < boxR.left - 0.5) add('dispatch text left ' + d.dataset.story);
+    if (R(so).left - R(pl).right < 2) add('dispatch source touches place ' + d.dataset.story);
+    out.notes.push(d.dataset.story + ' slack ' + Math.round(slack));
   });
 
   // everything stays inside the page, every card child inside its card
@@ -1054,10 +1107,10 @@ AUDIT_JS = r"""() => {
     for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++)
       if (inter(R(kids[i]), R(kids[j]), 0.5)) add('overlap ' + lab(kids[i]) + ' x ' + lab(kids[j]));
   });
-  sib('.row'); sib('.cols'); sib('.legend'); sib('.pinkey'); sib('.regionbar'); sib('.numbers');
-  sib('.body'); sib('.kick'); sib('.dl'); sib('.edition'); sib('.footer'); sib('.tg');
-  const secs = ['.rule-top','.dateline','.edition','.regionbar','.numbers','.r1','.r2','.mappanel',
-                '.digest','.footer'].map(s => [s, R(document.querySelector(s))]);
+  sib('.row'); sib('.cols'); sib('.col'); sib('.legend'); sib('.regionbar'); sib('.stats');
+  sib('.body'); sib('.kick'); sib('.dl'); sib('.dh'); sib('.kicker'); sib('.datecheck');
+  const secs = ['.toprule','.kicker','.masthead','.deck','.mastrule','.regionbar','.stats','.r1','.r2','.r3',
+                '.mappanel','.digest','.datecheck','.footer'].map(s => [s, R(document.querySelector(s))]);
   for (let i = 0; i < secs.length; i++) for (let j = i + 1; j < secs.length; j++)
     if (inter(secs[i][1], secs[j][1], 0.5)) add('section overlap ' + secs[i][0] + ' x ' + secs[j][0]);
 
@@ -1085,7 +1138,6 @@ AUDIT_JS = r"""() => {
       add('map badges crowd ' + badges[a][0] + ' x ' + badges[b][0]);
     dots.forEach((d, k) => { if (inter(badges[a][1], d, 0)) add('badge ' + badges[a][0] + ' covers dot ' + (k+1)); });
   }
-  out.badges = badges.length;
 
   // contrast
   const parse = (s) => s.match(/[\d.]+/g).slice(0, 4).map(Number);
@@ -1094,13 +1146,14 @@ AUDIT_JS = r"""() => {
   const ratio = (a, b) => { const x = Math.max(lum(a), lum(b)), y = Math.min(lum(a), lum(b)); return (x + .05) / (y + .05); };
   const bgOf = (el) => { let n = el; while (n) { const c = parse(getComputedStyle(n).backgroundColor);
       if (c.length < 4 || c[3] > 0) { if (c.length < 4 || c[3] === 1) return c.slice(0, 3); }
-      n = n.parentElement; } return [250, 248, 244]; };
+      n = n.parentElement; } return [246, 241, 230]; };
   const floor = (sel, min) => document.querySelectorAll(sel).forEach(el => {
     const r = ratio(parse(getComputedStyle(el).color).slice(0, 3), bgOf(el));
     if (r < min) add('contrast ' + lab(el) + ' ' + r.toFixed(2));
   });
-  floor('.card h2,.card p,.dl .tx,.dateline,.edition div,.cell .k,.lg .ct,.pk span,.f1', 7);
-  floor('.kick .rg,.kick .pl,.src,.dl .tg,.dl .so,.cell .v,.lg .nm,.pcap .l,.pcap .r,.badge,.dl .nb,.pk b,.seg,.f1 .k,.f1 .s,.lead,.mnote,.dl .tg .rg,.pk .rg', 4.5);
+  floor('.card h2,.card p,.dl .tx,.masthead,.deck,.seg .lab,.stats .k,.lg .ct,.lg .nm,.mnote,.footer', 6.5);
+  floor('.kick .pl,.kick .bt,.src,.dl .dh .pl,.dl .dh .so,.stats .v,.pcap .l,.pcap .r,.badge,.dl .nb,.seg .ct,' +
+        '.datecheck div,.datecheck b', 4.5);
   return out;
 }"""
 
@@ -1168,50 +1221,51 @@ def encode_jpeg(image):
 
 
 def main():
-    expect = {"c%02d" % c["n"] for c in CARDS} | {"d%02d" % (9 + i) for i in range(len(DISPATCHES))}
-    assert len(expect) == 20, len(expect)
+    expect = {"c%02d" % c["n"] for c in CARDS} | {"d%02d" % (14 + i) for i in range(len(DISPATCHES))}
+    assert len(expect) == 33, len(expect)
+    counts = region_counts()
+    assert sum(counts.values()) == 33, counts
     HTML_PATH.write_text(build_html(), encoding="utf-8")
     audit = render(sorted(expect))
 
     missing = sorted(expect - set(audit["ids"]))
     extra = sorted(set(audit["ids"]) - expect)
-    print("AUDIT doc=%s stories=%d/%d badges=%d repeat_identical=%s"
+    print("AUDIT doc=%s stories=%d/%d badges=%d region_sum=%d repeat_identical=%s"
           % (audit["doc"], len(audit["ids"]), len(expect), audit["badges"],
-             audit["repeat_identical"]))
+             sum(region_counts().values()), audit["repeat_identical"]))
     slack = [x for x in audit["notes"] if " slack " in x]
-    tight = sorted(slack, key=lambda s: int(s.split()[-1]))[:4]
+    tight = sorted(slack, key=lambda s: int(s.split()[-1]))[:5]
     print("  tightest dispatch slack (px):", ", ".join(tight))
     print("  card lines:", " | ".join(x for x in audit["notes"] if " slack " not in x))
     for issue in audit["issues"]:
         print("  ISSUE", issue)
     assert not missing and not extra, ("census", missing, extra)
     assert not audit["issues"], "layout audit reported %d issues" % len(audit["issues"])
+    assert sum(region_counts().values()) == 33
 
     from PIL import Image
     raw1, raw2 = RAW_1X.read_bytes(), RAW_2X.read_bytes()
     assert png_size(raw1) == (1024, 1024) and png_size(raw2) == (2048, 2048)
     native = Image.open(io.BytesIO(raw1)).convert("RGB")
     down = Image.open(io.BytesIO(raw2)).convert("RGB").resize((1024, 1024), Image.LANCZOS)
-    box = (392, 545, 1008, 976)  # the dispatch column
+    box = (340, 684, 1000, 952)  # the two dispatch columns
     sn, sd = sharpness(native, box), sharpness(down, box)
-    print("digest edge variance: native 1x %.1f | 2x->Lanczos %.1f" % (sn, sd))
-    # Text: keep whichever render is sharper on the dispatch column. Illustrations:
-    # always take the 2x-supersampled Lanczos pixels (cleaner anti-aliasing on flags,
-    # stripes, spirals and skylines), pasted back on the integer-aligned SVG boxes.
+    print("dispatch edge variance: native 1x %.1f | 2x->Lanczos %.1f" % (sn, sd))
     chosen, mode = (down, "2x supersampled -> Lanczos") if sd >= sn else (native, "native 1x")
     if chosen is native:
         boxes = [tuple(b) for b in audit["art_boxes"]]
-        assert len(boxes) == 9, boxes
+        assert len(boxes) == 14, boxes
         for b in boxes:
             chosen.paste(down.crop(b), b[:2])
-        mode += " text + 2x Lanczos in %d illustration boxes" % len(boxes)
+        mode += " text + 2x Lanczos in %d illustration/map boxes" % len(boxes)
 
     quality, data = encode_jpeg(chosen)
     assert data[:2] == b"\xff\xd8" and data[-2:] == b"\xff\xd9"
     assert len(data) < HARD_LIMIT
     ENTRY.write_bytes(data)
-    chosen.resize((300, 300), Image.LANCZOS).save(PREVIEW_300)
-    chosen.resize((512, 512), Image.LANCZOS).save(PREVIEW_512)
+    final = Image.open(io.BytesIO(data)).convert("RGB")
+    final.resize((300, 300), Image.LANCZOS).save(PREVIEW_300)
+    final.resize((512, 512), Image.LANCZOS).save(PREVIEW_512)
     print("entry.png: 1024x1024 JPEG q%d 4:4:4 via %s, %d bytes (%.1f KiB)"
           % (quality, mode, len(data), len(data) / 1024))
 
