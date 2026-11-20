@@ -38,8 +38,8 @@ PREVIEW_300 = Path("/tmp/news_v11_300.png")
 PREVIEW_512 = Path("/tmp/news_v11_512.png")
 CHROME = "/usr/bin/google-chrome"
 
-JPEG_QUALITIES = (89, 88, 87, 86, 85, 84)
-JPEG_MAX = 380 * 1000
+JPEG_QUALITIES = (91, 90, 89)
+JPEG_MAX = 480 * 1000
 HARD_LIMIT = 1048576
 
 SERIF = "Liberation Serif, DejaVu Serif, Georgia, serif"
@@ -223,55 +223,35 @@ def palm(x, base, height, lean, colour, scale=1.0):
 # strong focal object, one unmistakable crimson/emerald callout and generous
 # padding so nothing clips at 300px.  Row 1 is 322x102; rows 2-3 are 190x58.
 
-def leader(cx, hair, tie):
-    """A dignified, featureless head-and-shoulders silhouette in a dark suit."""
-    skin = "#E2B68C"
-    b = path("M%s 82 Q%s 64 %s 61 L%s 61 Q%s 64 %s 82 Z" % (
-        n(cx - 24), n(cx - 23), n(cx - 10), n(cx + 10), n(cx + 23), n(cx + 24)), "#1C2433", "#0B1018", .8)
-    b += poly([(cx - 5.5, 61), (cx + 5.5, 61), (cx, 72)], "#F8F5EE")
-    b += poly([(cx - 1.7, 62.5), (cx + 1.7, 62.5), (cx + 2.4, 71), (cx, 74.5), (cx - 2.4, 71)], tie)
-    b += rect(cx - 3.2, 55, 6.4, 7, skin)
-    b += '<ellipse cx="%s" cy="50" rx="7.4" ry="8.8" fill="%s" stroke="#7A5234" stroke-width=".6"/>' % (n(cx), skin)
-    if hair == "swoop":
-        b += path("M%s 50 Q%s 39.5 %s 40.2 Q%s 40 %s 47.5 Q%s 42.6 %s 50 Z" % (
-            n(cx - 7.9), n(cx - 8.4), n(cx + 1), n(cx + 9.6), n(cx + 8.4), n(cx + 2.5), n(cx - 7.9)), "#E9C46A")
-    elif hair == "dark":
-        b += path("M%s 48.5 Q%s 40 %s 40.6 Q%s 40 %s 48.5 Q%s 43.4 %s 48.5 Z" % (
-            n(cx - 7.6), n(cx - 7.4), n(cx), n(cx + 7.4), n(cx + 7.6), n(cx), n(cx - 7.6)), "#16181C")
-    else:
-        for sgn in (-1, 1):
-            b += path("M%s 52 Q%s 44 %s 42.6 L%s 46.5 Z" % (
-                n(cx + sgn * 7.6), n(cx + sgn * 7.9), n(cx + sgn * 4.6), n(cx + sgn * 4.4)), "#BDAA8A")
-    return b
-
-
 def art_apec():
-    """Shenzhen: three leader silhouettes before their flags at one summit table."""
+    """Shenzhen: a bold summit table under three crisp flags and podium tags."""
     W, H = 322, 102
     d = ("<defs>"
          + lingrad("apSky", [("0", "#082743", "1"), (".55", "#14507E", "1"), ("1", "#2A7FAE", "1")])
+         + lingrad("apSea", [("0", "#1D6E92", "1"), ("1", "#0B3B55", "1")])
          + lingrad("apT", [("0", "#F8E9C8", "1"), ("1", "#D9BE8A", "1")])
          + fold_shade("FUF") + fold_shade("FCF") + fold_shade("FRF")
          + "</defs>")
-    b = d + rect(0, 0, W, 84, "url(#apSky)")
-    b += circle(213, 36, 13, "#FFD36B", extra=' fill-opacity=".25"')
-    b += circle(213, 36, 7, "#FFE7A0")
-    for x, w, h in ((0, 18, 16), (18, 12, 27), (96, 14, 22), (110, 10, 30), (192, 16, 21),
-                    (234, 12, 26), (300, 12, 19), (312, 10, 28)):
-        b += rect(x, 84 - h, w, h, "#082743", extra=' fill-opacity=".85"')
-    for cx, fn, cid in ((57, flag_us, "FU"), (161, flag_cn, "FC"), (265, flag_ru, "FR")):
-        b += rect(cx - 25, 21, 2, 62, "#D8C7A2")
-        b += circle(cx - 24, 20.5, 2.4, "#E8B84B", "#3A2A16", .5)
-        b += pole_flag(cx - 24, 21, 46, 26, fn, cid, 1.1)
-    for cx, hair, tie in ((57, "swoop", "#C8102E"), (161, "dark", "#7A1418"), (265, "thin", "#2B4C8C")):
-        b += leader(cx, hair, tie)
-    b += rect(0, 82, W, 20, "#E8D2A8")
-    b += poly([(22, 80), (300, 80), (314, 91), (8, 91)], "url(#apT)")
-    b += rect(8, 91, 306, 11, "#6E4A2C")
-    b += rect(16, 93.5, 290, 4, "#9A1B1F")
+    b = d + rect(0, 0, W, 72, "url(#apSky)")
+    b += circle(280, 30, 17, "#FFD36B", extra=' fill-opacity=".28"')
+    b += circle(280, 30, 9, "#FFE7A0")
+    for x, w, h in ((0, 18, 14), (18, 12, 25), (30, 16, 18), (46, 10, 28), (56, 14, 20),
+                    (190, 16, 21), (206, 12, 29), (218, 16, 17), (238, 10, 24), (302, 12, 18)):
+        b += rect(x, 72 - h, w, h, "#082743", extra=' fill-opacity=".8"')
+    b += rect(0, 72, W, 8, "url(#apSea)")
+    for x, w in ((14, 22), (48, 14), (92, 30), (140, 18), (196, 24), (250, 16), (288, 20)):
+        b += rect(x, 74 + (x % 3), w, .9, "#FFFFFF", extra=' fill-opacity=".5"')
+    b += rect(0, 80, W, 22, "#E8D2A8")
+    b += poly([(30, 80), (292, 80), (306, 92), (16, 92)], "url(#apT)")
+    b += rect(16, 92, 290, 10, "#6E4A2C")
+    b += rect(24, 94, 274, 4, "#9A1B1F")
+    for px, fn, cid in ((57, flag_us, "FU"), (161, flag_cn, "FC"), (265, flag_ru, "FR")):
+        b += rect(px - 1, 18, 2, 58, "#D8C7A2")
+        b += circle(px, 17.5, 2.4, "#E8B84B", "#3A2A16", .5)
+        b += pole_flag(px, 18, 44, 28, fn, cid, 1.2)
     for x, lab in ((57, "TRUMP"), (161, "XI"), (265, "PUTIN")):
-        b += rect(x - 27, 78, 54, 12.5, "#FDFBF6", 2, "#1A1F2B", .9)
-        b += t(x, 87.4, lab, 8.4, "#1A1F2B", 900, "middle", .9)
+        b += rect(x - 29, 54, 58, 13, "#FDFBF6", 2, "#1A1F2B", .9)
+        b += t(x, 63.2, lab, 8.4, "#1A1F2B", 900, "middle", .9)
     b += rect(0, 0, W, 17, "#9A1B1F")
     b += rect(0, 17, W, 1.6, "#E8B84B")
     b += t(9, 12, "APEC 2026 &#183; SHENZHEN", 8.4, "#FFFFFF", 900, "start", 1.0)
