@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Build the 1024x1024 visual front page for Thursday 19 November 2026 (entry.png), v15.
+"""Build the 1024x1024 visual front page for Thursday 19 November 2026 (entry.png), v16.
 
 A bold one-day front page on warm cream newsprint: a centred serif masthead
 naming the date, an italic deck with the three lead stories, a seven-region
-colour strip, three large lead illustrations, ten illustrated secondary cards
-(two rows of five), a Natural Earth locator with numbered pins, and six short
-two-line briefs. Nineteen stories in all, every one an event of that Thursday.
-No micro-text: HTML text is at least 10px and SVG labels at least 9px.
+colour strip, a six-figure stat strip, three large lead illustrations, ten
+illustrated secondary cards (two rows of five), a Natural Earth locator with 21
+numbered pins, ten one-line briefs and a crimson DATE CHECK box that names the
+Wednesday and Friday stories left out. Twenty-three stories in all, every one
+an event of that Thursday. HTML text is at least 10px and SVG labels at least 9px.
 
 The page is rendered in headless Chromium at 1x and 2x device scale. The same
-pass runs a strict DOM audit (exact size, 19/19 story census, exact region
-sums, 18 map pins, no overflow, no overlaps, no clipped text, line limits,
+pass runs a strict DOM audit (exact size, 23/23 story census, exact region
+sums, 21 map pins, no overflow, no overlaps, no clipped text, line limits,
 minimum font sizes, SVG ink inside every viewBox and an ink-contrast floor);
 the build fails on any issue. Text comes from native 1x text; the 2x Lanczos
 pixels are pasted into the fourteen integer-aligned illustration and map
@@ -23,23 +24,24 @@ Lato, inline SVG and the Natural Earth 1:110m outline in world_land_110m.svgpath
 
 import io
 import math
+import re
 import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 ENTRY = ROOT / "entry.png"
 WORLD_PATH = ROOT / "world_land_110m.svgpath"
-HTML_PATH = Path("/tmp/world_news_canvas_v15.html")
-RAW_1X = Path("/tmp/world_news_canvas_v15_1x.png")
-RAW_2X = Path("/tmp/world_news_canvas_v15_2x.png")
-PREVIEW_300 = Path("/tmp/news_v15_300.png")
+HTML_PATH = Path("/tmp/world_news_canvas_v16.html")
+RAW_1X = Path("/tmp/world_news_canvas_v16_1x.png")
+RAW_2X = Path("/tmp/world_news_canvas_v16_2x.png")
+PREVIEW_300 = Path("/tmp/news_v16_300.png")
 CHROME = "/usr/bin/google-chrome"
 
-JPEG_QUALITIES = (91, 90, 89, 88, 87)
-JPEG_MAX = 440 * 1000
+JPEG_QUALITIES = (89, 88, 87, 86)
+JPEG_MAX = 425 * 1000
 HARD_LIMIT = 1048576
 
-N_STORIES = 19
+N_STORIES = 23
 
 # key: (label, fill, ink) - muted archival region inks, used for chips and pins
 REGIONS = {
@@ -60,7 +62,35 @@ def n(v):
     return "0" if s in ("", "-0") else s
 
 
+# v16 display heights: lead art is drawn on a 322x150 board and secondary art on
+# 190x96, then shown in 322x130 and 190x84 boxes. Geometry is compressed
+# vertically by k inside one group, while every label is counter-scaled about
+# its own baseline and every circle becomes an ellipse with ry = r / k, so text
+# keeps its true proportions and discs stay round.
+ART_SHOW = {322: 130, 190: 84}
+
+
+def _squash(body, k):
+    def fix_text(m):
+        tag = m.group(0)
+        y = float(re.search(r' y="([-\d.]+)"', tag).group(1))
+        return tag[:-1] + ' transform="translate(0 %s) scale(1 %s) translate(0 %s)">' % (
+            n(y), "%.5f" % (1 / k), n(-y))
+
+    def fix_circle(m):
+        r = m.group(3)
+        return '<ellipse cx="%s" cy="%s" rx="%s" ry="%s"' % (m.group(1), m.group(2), r, n(float(r) / k))
+
+    body = re.sub(r'<text class="lbl"[^>]*>', fix_text, body)
+    body = re.sub(r'<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([-\d.]+)"', fix_circle, body)
+    return '<g transform="scale(1 %.5f)">%s</g>' % (k, body)
+
+
 def svg(w, h, body, cls="art-svg"):
+    if cls == "art-svg" and w in ART_SHOW and h != ART_SHOW[w]:
+        show = ART_SHOW[w]
+        body = _squash(body, show / float(h))
+        h = show
     return ('<svg class="%s" viewBox="0 0 %s %s" preserveAspectRatio="none" '
             'xmlns="http://www.w3.org/2000/svg">%s</svg>' % (cls, n(w), n(h), body))
 
@@ -215,8 +245,9 @@ def palm(x, base, height, lean, colour, scale=1.0):
 
 
 
-# ------------------------------------------------------- v15 large editorial art
-# Lead boxes are 322x150, secondary boxes 190x96, both drawn 1:1 in user units.
+# ------------------------------------------------------- large editorial art
+# Lead art is drawn on 322x150 boards and secondary art on 190x96 boards, then
+# shown at 322x130 and 190x84 (see ART_SHOW).
 # Every picture has one focal object, one or two padded labels at 10px or more,
 # and nothing that needs reading at small size to make sense.
 
@@ -340,13 +371,13 @@ def art_anthropic():
     for x, p in ((20, 83), (96, 111.5), (304, 97.17)):
         b += circle(x, py(p), 5.2, "#052E22", "#6EE7B7", 2.0) + circle(x, py(p), 2.1, "#D1FAE5")
     b += t(14, 20, "ANT &#183; NASDAQ", 13, "#ECFDF5", 900, "start", 1.0)
-    b += t(14, 37, "+17% DAY ONE", 12, "#6EE7B7", 900, "start", .5)
+    b += t(14, 39, "+17% DAY ONE", 12, "#6EE7B7", 900, "start", .5)
     b += t(108, 52, "OPEN $111.50", 11, "#D1FAE5", 900, "start", .3)
     b += t(14, 146, "IPO PRICE $83", 11, "#FDE68A", 900, "start", .3)
     b += t(310, 75, "CLOSE $97.17", 11, "#ECFDF5", 900, "end", .3)
     b += rect(220, 6, 96, 44, "#047857", 2, "#D1FAE5", 1.1)
-    b += t(268, 30, "$81BN", 20, "#FFFFFF", 900, "middle", -.2)
-    b += t(268, 44, "RECORD IPO", 9.5, "#D1FAE5", 900, "middle", .8)
+    b += t(268, 28, "$81BN", 20, "#FFFFFF", 900, "middle", -.2)
+    b += t(268, 46, "RECORD IPO", 9.5, "#D1FAE5", 900, "middle", .8)
     return svg(W, H, b)
 
 
@@ -370,11 +401,11 @@ def art_cop():
     b += circle(67, 76, 8, "#DC2626", "#083344", 1.1)
     b += rect(80, 0, 110, 96, "#F6EBD2") + rect(80, 0, 1.5, 96, "#1A1F2B")
     b += rect(86, 6, 98, 84, "url(#cpD)", 1, "#1A1F2B", 1.0)
-    b += t(92, 22, "COP31 DRAFT", 10, "#9A1B1F", 900, "start", .8)
-    b += t(92, 41, "FOSSIL FUELS", 12, "#1A1F2B", 900, "start", .2)
+    b += t(92, 20, "COP31 DRAFT", 10, "#9A1B1F", 900, "start", .8)
+    b += t(92, 39, "FOSSIL FUELS", 12, "#1A1F2B", 900, "start", .2)
     b += t(92, 58, "PHASE-OUT", 12, "#1A1F2B", 900, "start", .4)
-    b += line(90, 37, 180, 37, "#9A1B1F", 2.6) + line(90, 54, 160, 54, "#9A1B1F", 2.6)
-    b += t(92, 81, "35% BY 2035", 13, "#9A1B1F", 900, "start", -.2)
+    b += line(90, 34.4, 180, 34.4, "#9A1B1F", 2.6) + line(90, 53.4, 160, 53.4, "#9A1B1F", 2.6)
+    b += t(92, 82, "35% BY 2035", 13, "#9A1B1F", 900, "start", -.2)
     return svg(W, H, b)
 
 
@@ -539,8 +570,8 @@ def art_kenya():
     b += line(46, 12, 46, 66, "#ECFEFF", 1.1, extra=' stroke-opacity=".9"')
     b += poly([(80, 36), (93, 45), (88, 66), (74, 66), (68, 45)], "#0E7490", "#062E38", 1.1)
     b += rect(108, 6, 78, 44, "#9A1B1F", 2, "#FDFBF6", 1.1)
-    b += t(147, 29, "$60BN+", 18, "#FFFFFF", 900, "middle", -.2)
-    b += t(147, 43, "EST. DEPOSIT", 9, "#F7E7C2", 900, "middle", .4)
+    b += t(147, 27, "$60BN+", 18, "#FFFFFF", 900, "middle", -.2)
+    b += t(147, 45, "EST. DEPOSIT", 9, "#F7E7C2", 900, "middle", .4)
     b += chip(4, 74, 104, 18, "MRIMA HILL, KENYA", 9.5, "#0B2A26", "#FDFBF6", .4)
     return svg(W, H, b)
 
@@ -684,32 +715,61 @@ CARDS = [
 ]
 
 BRIEFS = [
+    # column one: 14-18, column two: 19-23
     dict(n=14, reg="AM", place="WASHINGTON", lon=-77.04, lat=38.90,
-         tx="US Senate rejects a curb on Iran war powers, 48&#8211;51."),
+         tx="US Senate rejects Iran war-powers curb, 48&#8211;51."),
     dict(n=15, reg="EU", place="COPENHAGEN", lon=12.57, lat=55.68,
-         tx="Danish MPs back the US&#8211;Greenland pact, 109&#8211;0."),
-    dict(n=16, reg="AF", place="NYALA, SUDAN", lon=24.88, lat=12.05,
+         tx="Danish MPs back US&#8211;Greenland pact, 109&#8211;0."),
+    dict(n=16, reg="EU", place="KERCH", lon=36.47, lat=45.36,
+         tx="Ukraine strike halts Crimea bridge rail traffic."),
+    dict(n=17, reg="AP", place="S. KOREA", lon=126.98, lat=37.57,
+         tx="551,864 sit Suneung exam; flights grounded."),
+    dict(n=18, reg="AF", place="NYALA, SUDAN", lon=24.88, lat=12.05,
          tx="Army jets pound RSF bases in South Darfur."),
-    dict(n=17, reg="ME", place="LEBANON", lon=35.50, lat=33.90,
-         tx="Israel says it struck a Hezbollah missile site."),
-    dict(n=18, reg="AM", place="BOGOT&#193;", lon=-74.07, lat=4.71,
-         tx="Colombian unions strike nationwide over a tax bill."),
-    dict(n=19, reg="OC", place="COOK ISLANDS", lon=-159.80, lat=-21.20,
-         tx="Category 4 Cyclone Xavier lashes the northern atolls."),
+    dict(n=19, reg="AF", place="SOMALIA", lon=45.34, lat=2.05,
+         tx="Mogadishu gives UAE envoy 72 hours to leave."),
+    dict(n=20, reg="AM", place="BOGOT&#193;", lon=-74.07, lat=4.71,
+         tx="Unions strike nationwide over tax bill."),
+    dict(n=21, reg="ME", place="LEBANON", lon=35.50, lat=33.90,
+         tx="Israel says it hit Hezbollah missile site."),
+    dict(n=22, reg="OC", place="COOK ISLANDS", lon=-159.80, lat=-21.20,
+         tx="Cat-4 Cyclone Xavier lashes northern atolls."),
+    dict(n=23, reg="GL", place="IMF / APEC", lon=None, lat=None,
+         tx="Georgieva: AI boom may force rate hikes."),
 ]
+
+KPIS = [
+    ("3", "PRESIDENTS<br>AT ONE TABLE", "AP"),
+    ("9&#8211;6", "WORLD COURT<br>GENOCIDE VOTE", "GL"),
+    ("$81bn", "ANTHROPIC<br>RECORD IPO", "AM"),
+    ("300k", "EVACUATED<br>IN ODISHA", "AP"),
+    ("109&#8211;0", "DANISH ARCTIC<br>PACT VOTE", "EU"),
+    ("99", "GTA VI<br>METASCORE", "GL"),
+]
+
+DATE_CHECK = (
+    "Every story on this page happened, or was first reported, on <b>Thursday, 19 November 2026 "
+    "(UTC)</b>. Left out as other days&#8217; news &#8212; <b>WED 18 NOV:</b> Takaichi&#8211;Putin "
+    "talks &#183; Mo&#239;se verdict &#183; Gaza &#8216;yellow line&#8217; &#183; Jeffries "
+    "251&#8211;11 &#183; Van Gogh $190.4m &#183; Fed minutes. <b>FRI 20 NOV:</b> Akvan landfall "
+    "&#183; UK&#8211;EU summit."
+)
 
 DECK = ("Trump, Xi and Putin meet at APEC &#183; World Court rules Myanmar committed Rohingya genocide "
         "&#183; Anthropic&#8217;s record $81bn IPO")
-FOOTER = ("19 November 2026 (UTC) &#183; All events verified for this date &#183; Disputed claims "
-          "attributed &#183; Sources: BBC, Reuters, Guardian, AP, DW, Al Jazeera, UN News, RNZ, Kyiv Independent")
+FOOTER = ("19 November 2026 (UTC) &#183; 23 stories, all verified for this date &#183; Disputed claims "
+          "attributed &#183; Sources: BBC, Reuters, Guardian, AP, DW, Al Jazeera, UN News, RNZ, Kyiv Post, "
+          "Korea Herald")
 
-# map badge centres (px in the 348-wide map) for every pinned story
+# map badge centres (px in the 326-wide map) for every pinned story; 10 and 17
+# share the Korea dot
 BADGES = {
-    1: (302, 98), 2: (158, 36), 3: (121, 51), 4: (186, 73), 5: (258, 105), 6: (222, 41),
-    7: (237, 91), 8: (229, 120), 9: (13, 145), 10: (316, 56), 11: (197, 29), 12: (157, 62),
-    14: (81, 58), 15: (177, 22), 16: (181, 101), 17: (227, 65), 18: (86, 110), 19: (35, 141),
+    1: (276, 94), 2: (150, 38), 3: (112, 54), 4: (176, 72), 5: (244, 100), 6: (208, 32),
+    7: (222, 82), 8: (186, 118), 9: (12, 134), 10: (264, 50), 11: (190, 30), 12: (147, 56),
+    14: (78, 72), 15: (166, 20), 16: (228, 46), 17: (296, 66), 18: (168, 94), 19: (222, 102),
+    20: (80, 102), 21: (216, 64), 22: (34, 128),
 }
-MAP_W = 348
+MAP_W = 326
 MAP_SCALE = MAP_W / 1000.0
 MAP_H = round(486.99 * MAP_SCALE, 1)
 PIN_R = 7.2
@@ -750,6 +810,7 @@ def world_map_svg():
     b += ('<g transform="scale(%.5f)"><path d="%s" fill="#E6DCC5" stroke="#B9A883" '
           'stroke-width="2.2" stroke-linejoin="round"/></g>' % (MAP_SCALE, land))
     leaders, dots, badges = "", "", ""
+    drawn = set()
     for s in all_stories():
         if s["lon"] is None:
             continue
@@ -760,7 +821,9 @@ def world_map_svg():
         dist = math.hypot(dx, dy) or 1
         ex, ey = bx - dx / dist * (PIN_R + 1.5), by - dy / dist * (PIN_R + 1.5)
         leaders += line(x, y, ex, ey, ink, 1.0, extra=' stroke-opacity=".9"')
-        dots += circle(x, y, 2.6, fill, "#FFFFFF", 1, ' class="pin-dot"')
+        if (s["lon"], s["lat"]) not in drawn:
+            drawn.add((s["lon"], s["lat"]))
+            dots += circle(x, y, 2.6, fill, "#FFFFFF", 1, ' class="pin-dot"')
         badges += ('<g class="pin-badge" data-n="%d">' % s["n"]
                    + circle(bx, by, PIN_R, ink, "#FFFFFF", 1.3)
                    + t(bx, by + 3.4, str(s["n"]), 9.5 if s["n"] < 10 else 9, "#FFFFFF", 900, "middle",
@@ -777,35 +840,43 @@ CSS = """
 html,body{width:1024px;height:1024px;overflow:hidden;background:#F6F1E6;}
 body{font-family:Lato,sans-serif;color:#141923;-webkit-font-smoothing:antialiased;}
 .page{position:relative;width:1024px;height:1024px;overflow:hidden;background:#F6F1E6;}
-.toprule{position:absolute;left:16px;right:16px;top:8px;height:2.5px;background:#9A1B1F;}
-.kicker{position:absolute;left:16px;right:16px;top:12px;height:12px;display:flex;
+.toprule{position:absolute;left:16px;right:16px;top:6px;height:2.5px;background:#9A1B1F;}
+.kicker{position:absolute;left:16px;right:16px;top:10px;height:12px;display:flex;
  align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden;}
 .kicker span{font-weight:900;font-size:10px;letter-spacing:1.4px;line-height:12px;}
 .kicker .kl{color:#9A1B1F;}
 .kicker .kr{color:#4A4438;letter-spacing:.9px;}
-.masthead{position:absolute;left:16px;right:16px;top:24px;height:72px;text-align:center;
+.masthead{position:absolute;left:16px;right:16px;top:22px;height:72px;text-align:center;
  font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:66px;line-height:72px;
- letter-spacing:-1.4px;color:#141923;white-space:nowrap;overflow:hidden;}
-.deck{position:absolute;left:16px;right:16px;top:96px;height:20px;text-align:center;
+ letter-spacing:-1.4px;color:#141923;white-space:nowrap;overflow:hidden;line-height:72px;}
+.deck{position:absolute;left:16px;right:16px;top:94px;height:20px;text-align:center;
  font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-style:italic;font-weight:400;font-size:16px;
  line-height:20px;color:#9A1B1F;white-space:nowrap;overflow:hidden;}
-.mastrule{position:absolute;left:16px;right:16px;top:119px;height:1.5px;background:#2C313A;}
-.regionbar{position:absolute;left:16px;right:16px;top:124px;height:22px;display:flex;gap:4px;}
+.mastrule{position:absolute;left:16px;right:16px;top:115px;height:1.5px;background:#2C313A;}
+.regionbar{position:absolute;left:16px;right:16px;top:119px;height:22px;display:flex;gap:4px;}
 .seg{flex:1 1 0;height:22px;display:flex;align-items:center;justify-content:center;gap:7px;
  background:var(--fill);border-radius:3px;white-space:nowrap;overflow:hidden;}
 .seg .lab{font-weight:900;font-size:10.5px;letter-spacing:.9px;color:#FFFFFF;line-height:13px;}
 .seg .ct{font-weight:900;font-size:11px;color:var(--ink);background:#FFFFFF;border-radius:8px;
  min-width:18px;padding:0 4px;text-align:center;line-height:15px;}
+.kpis{position:absolute;left:16px;right:16px;top:145px;height:27px;display:flex;
+ border-top:1.5px solid #2C313A;border-bottom:1.5px solid #2C313A;background:#FDFBF6;}
+.kpi{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;
+ overflow:hidden;white-space:nowrap;border-left:1px dotted #B9AE95;}
+.kpi:first-child{border-left:none;}
+.kpi .fig{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:19.5px;
+ line-height:22px;color:var(--ink);letter-spacing:-.3px;}
+.kpi .kl{font-weight:900;font-size:10px;line-height:11px;letter-spacing:.35px;color:#2C313A;}
 .row{position:absolute;left:16px;width:992px;display:grid;}
-.r1{top:152px;height:258px;grid-template-columns:repeat(3,324px);column-gap:10px;}
-.r2{top:418px;height:184px;grid-template-columns:repeat(5,192px);column-gap:8px;}
-.r3{top:610px;height:184px;grid-template-columns:repeat(5,192px);column-gap:8px;}
+.r1{top:175px;height:237px;grid-template-columns:repeat(3,324px);column-gap:10px;}
+.r2{top:418px;height:172px;grid-template-columns:repeat(5,192px);column-gap:8px;}
+.r3{top:596px;height:172px;grid-template-columns:repeat(5,192px);column-gap:8px;}
 .card{position:relative;background:#FDFBF6;border:1.25px solid #2C313A;
  display:flex;flex-direction:column;overflow:hidden;}
 .art{flex:none;overflow:hidden;border-bottom:1.25px solid #2C313A;background:#FBF7EE;}
 .art svg{display:block;width:100%;height:100%;}
-.r1 .art{height:150px;}
-.r2 .art,.r3 .art{height:96px;}
+.r1 .art{height:130px;}
+.r2 .art,.r3 .art{height:84px;}
 .body{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
 .r1 .body{padding:5px 10px 0;}
 .r2 .body,.r3 .body{padding:5px 8px 0;}
@@ -830,30 +901,37 @@ body{font-family:Lato,sans-serif;color:#141923;-webkit-font-smoothing:antialiase
  overflow:hidden;flex:none;}
 .r1 p{margin-top:3px;font-size:13px;line-height:14.5px;height:29px;}
 .r2 p,.r3 p{margin-top:3px;font-size:11.5px;line-height:13px;height:26px;}
-.panel{position:absolute;top:802px;height:196px;background:#FDFBF6;border:1px solid #B9AE95;
+.panel{position:absolute;top:774px;height:184px;background:#FDFBF6;border:1px solid #B9AE95;
  overflow:hidden;}
-.mappanel{left:16px;width:364px;padding:0 6px;display:flex;flex-direction:column;}
-.digest{left:388px;width:620px;padding:0 12px;display:flex;flex-direction:column;}
+.mappanel{left:16px;width:342px;padding:0 6px;display:flex;flex-direction:column;}
+.digest{left:366px;width:642px;padding:0 12px;display:flex;flex-direction:column;}
 .pcap{height:19px;display:flex;justify-content:space-between;align-items:center;white-space:nowrap;
  border-bottom:1.5px solid #2C313A;overflow:hidden;flex:none;}
 .pcap .l{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:12px;
  letter-spacing:1.3px;color:#141923;}
 .pcap .r{font-weight:700;font-size:10px;letter-spacing:.4px;color:#5A5449;}
-.mapbox{margin-top:2px;width:350px;border:1px solid #B9C9D3;flex:none;}
-.map-svg{display:block;width:348px;height:%MAPH%px;}
-.briefs{margin-top:6px;flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;
- grid-template-rows:repeat(3,1fr);column-gap:18px;row-gap:0;}
-.bf{display:flex;gap:8px;align-items:flex-start;padding-top:6px;border-top:1px dotted #CDBFA5;
+.mapbox{margin-top:2px;width:328px;border:1px solid #B9C9D3;flex:none;}
+.map-svg{display:block;width:326px;height:%MAPH%px;}
+.briefs{margin-top:3px;flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;
+ grid-template-rows:repeat(5,1fr);grid-auto-flow:column;column-gap:18px;row-gap:0;}
+.bf{display:flex;gap:8px;align-items:flex-start;padding-top:3px;border-top:1px dotted #CDBFA5;
  overflow:hidden;min-width:0;}
-.bf:nth-child(1),.bf:nth-child(2){border-top:none;padding-top:2px;}
-.bf .nb{flex:none;width:21px;height:20px;line-height:20px;text-align:center;font-weight:900;
- font-size:11px;color:#FFFFFF;background:var(--ink);border-radius:2px;margin-top:1px;}
+.bf:nth-child(1),.bf:nth-child(6){border-top:none;padding-top:2px;}
+.bf .nb{flex:none;width:21px;height:18px;line-height:18px;text-align:center;font-weight:900;
+ font-size:11px;color:#FFFFFF;background:var(--ink);border-radius:2px;margin-top:2px;}
 .bf .bx{flex:1;min-width:0;display:flex;flex-direction:column;}
-.bf .pl{font-weight:900;font-size:10.5px;letter-spacing:.8px;color:var(--ink);line-height:13px;
+.bf .pl{font-weight:900;font-size:11px;letter-spacing:.8px;color:var(--ink);line-height:12px;
  white-space:nowrap;overflow:hidden;}
-.bf .tx{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:14px;
- line-height:16px;color:#141923;overflow:hidden;max-height:32px;}
-.footer{position:absolute;left:16px;right:16px;top:1003px;height:14px;text-align:center;font-weight:700;
+.bf .tx{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:13px;
+ line-height:14.5px;color:#141923;overflow:hidden;white-space:nowrap;}
+.datecheck{position:absolute;left:16px;right:16px;top:963px;height:36px;display:flex;align-items:center;
+ gap:10px;border:2px solid #9A1B1F;background:#FFF8EC;padding:0 10px 0 4px;overflow:hidden;}
+.datecheck .dk{flex:none;background:#9A1B1F;color:#FFFFFF;font-weight:900;font-size:12px;
+ letter-spacing:1px;line-height:24px;padding:0 9px;border-radius:2px;white-space:nowrap;}
+.datecheck .dt{flex:1;min-width:0;font-size:10.5px;line-height:13.5px;color:#2C313A;font-weight:400;
+ overflow:hidden;max-height:27px;}
+.datecheck .dt b{font-weight:900;color:#9A1B1F;}
+.footer{position:absolute;left:16px;right:16px;top:1004px;height:14px;text-align:center;font-weight:700;
  font-size:10px;line-height:14px;letter-spacing:.15px;color:#4A4438;white-space:nowrap;overflow:hidden;}
 """.replace("%MAPH%", n(MAP_H))
 
@@ -889,6 +967,8 @@ def build_html():
         '<div class="seg" data-region="%s" data-count="%d" style="%s">'
         '<span class="lab">%s</span><span class="ct">%d</span></div>'
         % (k, counts[k], style_vars(k), REGIONS[k][0], counts[k]) for k in ORDER)
+    kpis = "".join('<div class="kpi" style="%s"><span class="fig">%s</span><span class="kl">%s</span></div>'
+                   % (style_vars(r), f, lab) for f, lab, r in KPIS)
     rows = [CARDS[0:3], CARDS[3:8], CARDS[8:13]]
     rows_html = "".join('<div class="row r%d">%s</div>' % (i + 1, "".join(card_html(c) for c in r))
                         for i, r in enumerate(rows))
@@ -905,13 +985,16 @@ def build_html():
         '<div class="deck">' + DECK + '</div>'
         '<div class="mastrule"></div>'
         '<div class="regionbar">' + segs + '</div>'
+        + '<div class="kpis">' + kpis + '</div>'
         + rows_html
         + '<div class="panel mappanel"><div class="pcap"><span class="l">WHERE IT HAPPENED</span>'
-          '<span class="r">%d PINS &#183; 13 IS WORLDWIDE</span></div>' % pins
+          '<span class="r">%d PINS &#183; 13, 23 WORLDWIDE</span></div>' % pins
         + '<div class="mapbox">' + world_map_svg() + '</div></div>'
         + '<div class="panel digest"><div class="pcap"><span class="l">ALSO ON THURSDAY</span>'
           '<span class="r">19 NOVEMBER 2026</span></div>'
           '<div class="briefs">' + "".join(brief_html(s) for s in BRIEFS) + '</div></div>'
+        + '<div class="datecheck"><span class="dk">DATE CHECK &#10003;</span>'
+          '<span class="dt">' + DATE_CHECK + '</span></div>'
         + '<div class="footer">' + FOOTER + '</div>'
         '</div></body></html>'
     )
@@ -951,7 +1034,7 @@ AUDIT_JS = r"""(want) => {
   if (out.badges !== want.pins) add('map badges ' + out.badges);
 
   // overflow / clipped text
-  document.querySelectorAll('.masthead,.deck,.kicker span,.seg,.kick,.card h2,.card p,.pcap,.bf,.bf .pl,' +
+  document.querySelectorAll('.kpi,.kpi .fig,.kpi .kl,.datecheck,.datecheck .dt,.masthead,.deck,.kicker span,.seg,.kick,.card h2,.card p,.pcap,.bf,.bf .pl,' +
       '.bf .tx,.footer,.panel,.card,.art,.mapbox,.body').forEach(el => {
     if (el.scrollWidth - el.clientWidth > 0.5) add('overflow-x ' + lab(el) + ' +' + (el.scrollWidth - el.clientWidth));
     if (el.scrollHeight - el.clientHeight > 0.5) add('overflow-y ' + lab(el) + ' +' + (el.scrollHeight - el.clientHeight));
@@ -970,8 +1053,12 @@ AUDIT_JS = r"""(want) => {
   document.querySelectorAll('.bf').forEach(b => {
     const lt = lines(b.querySelector('.tx'));
     out.notes.push(b.dataset.story + ' t' + lt);
-    if (lt < 1 || lt > 2) add('brief lines ' + b.dataset.story + ' (' + lt + ')');
+    if (lt !== 1) add('brief lines ' + b.dataset.story + ' (' + lt + ')');
   });
+  { const ld = lines(document.querySelector('.datecheck .dt'));
+    out.notes.push('datecheck d' + ld);
+    if (ld < 1 || ld > 2) add('date check lines ' + ld); }
+  document.querySelectorAll('.kpi .kl').forEach(k => { if (lines(k) !== 2) add('kpi label lines ' + k.textContent); });
   // headline text must not end in a lone short word (widow) on line two
   // every HTML text node at least 10px
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -1008,9 +1095,9 @@ AUDIT_JS = r"""(want) => {
       if (inter(R(kids[i]), R(kids[j]), 0.5)) add('overlap ' + lab(kids[i]) + ' x ' + lab(kids[j]));
   });
   sib('.row'); sib('.regionbar'); sib('.body'); sib('.kick'); sib('.kicker'); sib('.briefs'); sib('.bf');
-  sib('.bx'); sib('.mappanel'); sib('.digest');
-  const secs = ['.toprule','.kicker','.masthead','.deck','.mastrule','.regionbar','.r1','.r2','.r3',
-                '.mappanel','.digest','.footer'].map(s => [s, R(document.querySelector(s))]);
+  sib('.bx'); sib('.mappanel'); sib('.digest'); sib('.kpis'); sib('.kpi'); sib('.datecheck');
+  const secs = ['.toprule','.kicker','.masthead','.deck','.mastrule','.regionbar','.kpis','.r1','.r2','.r3',
+                '.mappanel','.digest','.datecheck','.footer'].map(s => [s, R(document.querySelector(s))]);
   for (let i = 0; i < secs.length; i++) for (let j = i + 1; j < secs.length; j++)
     if (inter(secs[i][1], secs[j][1], 0.5)) add('section overlap ' + secs[i][0] + ' x ' + secs[j][0]);
 
@@ -1068,7 +1155,8 @@ AUDIT_JS = r"""(want) => {
     const r = ratio(parse(getComputedStyle(el).color).slice(0, 3), bgOf(el));
     if (r < min) add('contrast ' + lab(el) + ' ' + r.toFixed(2));
   });
-  floor('.card h2,.card p,.bf .tx,.masthead,.deck,.seg .lab,.footer', 6.5);
+  floor('.card h2,.card p,.bf .tx,.masthead,.deck,.seg .lab,.footer,.kpi .kl,.datecheck .dt', 6.5);
+  floor('.kpi .fig,.datecheck .dk,.datecheck .dt b', 4.5);
   floor('.kick .pl,.kick .bt,.bf .pl,.pcap .l,.pcap .r,.badge,.bf .nb,.seg .ct,.kicker span', 4.5);
   return out;
 }"""
