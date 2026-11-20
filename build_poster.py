@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build the 1024x1024 visual broadsheet for Thursday 19 November 2026 (entry.png), v10.
+"""Build the 1024x1024 visual broadsheet for Thursday 19 November 2026 (entry.png), v11.
 
 A classic archival editorial broadsheet: warm cream newsprint, a giant Title-Case
-serif masthead, an italic crimson deck, a seven-region balance bar, a parchment
-Day-in-Numbers strip, thirteen bold high-contrast editorial graphics in three
+serif masthead, an italic crimson deck, a seven-pill colour-coded region bar, a
+bold Day-in-Numbers strip, thirteen bold high-contrast editorial graphics in three
 rows (3 + 5 + 5), a Natural Earth locator with numbered pins 1-13, and twenty
 numbered dispatches (14-33) as one crisp line each in two balanced columns. A
 crimson-boxed DATE CHECK names the Wednesday and Friday stories that were
@@ -31,15 +31,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 ENTRY = ROOT / "entry.png"
 WORLD_PATH = ROOT / "world_land_110m.svgpath"
-HTML_PATH = Path("/tmp/world_news_canvas_v10.html")
-RAW_1X = Path("/tmp/world_news_canvas_v10_1x.png")
-RAW_2X = Path("/tmp/world_news_canvas_v10_2x.png")
-PREVIEW_300 = Path("/tmp/news_v10_300.png")
-PREVIEW_512 = Path("/tmp/news_v10_512.png")
+HTML_PATH = Path("/tmp/world_news_canvas_v11.html")
+RAW_1X = Path("/tmp/world_news_canvas_v11_1x.png")
+RAW_2X = Path("/tmp/world_news_canvas_v11_2x.png")
+PREVIEW_300 = Path("/tmp/news_v11_300.png")
+PREVIEW_512 = Path("/tmp/news_v11_512.png")
 CHROME = "/usr/bin/google-chrome"
 
-JPEG_QUALITIES = (92, 91, 90)
-JPEG_MAX = 450 * 1000
+JPEG_QUALITIES = (90, 89, 88, 87)
+JPEG_MAX = 420 * 1000
 HARD_LIMIT = 1048576
 
 SERIF = "Liberation Serif, DejaVu Serif, Georgia, serif"
@@ -550,13 +550,13 @@ def art_berlin():
     b += rect(0, 43, 102, 15, "#9A1B1F")
     b += rect(102, 43, 88, 15, "#1A1F2B")
     b += rect(0, 43, 190, 1.4, "#E8B84B")
-    b += t(51, 54, "UNITED LINE", 8.0, "#FFFFFF", 900, "middle", .9)
+    b += t(51, 54, "ENERGY TRUCE", 8.0, "#FFFFFF", 900, "middle", .9)
     b += t(146, 54, "BERLIN", 8.8, "#FFFFFF", 900, "middle", 1.1)
     return svg(W, H, b)
 
 
 def art_kenya():
-    """Mrima Hill: bold emerald/terracotta ridges, a crystal and a $60BN+ badge."""
+    """Mrima Hill: bold emerald/terracotta ridges, a crystal and a $60BN+ estimate badge."""
     W, H = 190, 58
     d = ("<defs>"
          + lingrad("knS", [("0", "#0F3B35", "1"), (".6", "#2F7D5B", "1"), ("1", "#E8B76B", "1")])
@@ -578,7 +578,7 @@ def art_kenya():
     b += t(40, 13.6, "MRIMA HILL", 6.8, "#FDFBF6", 900, "middle", .9)
     b += rect(116, 4, 70, 30, "#9A1B1F", 2, "#FDFBF6", 1.0)
     b += t(151, 20, "$60BN+", 11.2, "#FFFFFF", 900, "middle", -.2)
-    b += t(151, 29, "NIOBIUM", 4.4, "#F7E7C2", 900, "middle", .7)
+    b += t(151, 29.5, "EST. DEPOSIT", 5.0, "#F7E7C2", 900, "middle", .5)
     return svg(W, H, b)
 
 
@@ -615,7 +615,7 @@ def art_tonga():
 
 
 def art_seoul():
-    """Seoul: a bold Taegeukgi, a wooden gavel and an angled OVERTURNED stamp."""
+    """Seoul: a bold Taegeukgi, a wooden gavel and an angled RETRIAL 9-3 stamp."""
     W, H = 190, 58
     d = ("<defs>"
          + lingrad("seS", [("0", "#0C2438", "1"), (".6", "#17496B", "1"), ("1", "#2E6E9E", "1")])
@@ -644,7 +644,7 @@ def art_seoul():
     # angled stamp
     b += '<g transform="rotate(-12 145 29)">'
     b += rect(107, 19, 76, 21, "#9A1B1F", 2, "#FDFBF6", 1.0)
-    b += t(145, 32.8, "OVERTURNED", 7.2, "#FFFFFF", 900, "middle", .7)
+    b += t(145, 32.8, "RETRIAL &#183; 9&#8211;3", 7.6, "#FFFFFF", 900, "middle", .7)
     b += '</g>'
     b += t(6, 55, "SEOUL", 7.2, "#FDE68A", 900, "start", 1.2)
     return svg(W, H, b)
@@ -683,7 +683,7 @@ def art_paris():
 CARDS = [
     # row 1: three lead stories
     dict(n=1, reg="AP", place="SHENZHEN", beat="SUMMIT", art=art_apec, lon=114.06, lat=22.54, lead=True,
-         h="Trump, Xi and Putin hold first three-way summit",
+         h="Trump, Xi and Putin hold first <span style=\"white-space:nowrap\">three-way</span> summit",
          p="First US&#8211;China&#8211;Russia trilateral at APEC issues a Declaration on Peace on nuclear "
            "risk; Ukraine and Iran omitted.",
          src="BBC &#183; Guardian"),
@@ -711,68 +711,68 @@ CARDS = [
          p="Strike kills one in Kyiv; two embassies and a cathedral damaged.",
          src="Kyiv Ind. &#183; BBC"),
     dict(n=7, reg="ME", place="RIYADH", beat="GULF", art=art_riyadh, lon=46.68, lat=24.71,
-         h="Houthi strike hits Riyadh; PIF tower damaged",
-         p="Saudi authorities report damage to the PIF tower, Riyadh&#8217;s tallest, after missile and drone barrage.",
+         h="Missile strike damages Riyadh&#8217;s PIF tower",
+         p="Coalition blames Houthis; Saudi officials report windows blown out on 7 floors, no injuries.",
          src="Reuters &#183; Al Jazeera"),
     dict(n=8, reg="GL", place="WORLDWIDE", pin="MIAMI", beat="GAMES", art=art_gta, lon=-80.19, lat=25.76,
          h="GTA VI unlocks globally to 99 Metascore",
          p="After 13 years, launch beats Zelda&#8217;s record with $1.5bn+ in pre-sales.",
          src="BBC &#183; Guardian"),
     # row 3
-    dict(n=9, reg="EU", place="BERLIN", beat="EUROPE", art=art_berlin, lon=13.40, lat=52.52,
-         h="European allies set united Russia line",
-         p="Leaders coordinate terms for talks; Macron urges reopening NATO&#8217;s role.",
+    dict(n=9, reg="EU", place="BERLIN", beat="DIPLOMACY", art=art_berlin, lon=13.40, lat=52.52,
+         h="Allies urge Russia to agree winter energy truce",
+         p="Berlin summit also seeks a Black Sea truce; Macron revives Ukraine&#8217;s NATO bid.",
          src="DW &#183; France 24"),
     dict(n=10, reg="AF", place="MRIMA HILL", beat="MINERALS", art=art_kenya, lon=39.25, lat=-4.48,
-         h="Kenya picks US-led $60bn+ niobium bid",
-         p="Frontier Minerals beats seven rivals for the coastal niobium deposit.",
-         src="BBC"),
+         h="Kenya picks US-led bid for Mrima Hill niobium",
+         p="Frontier Minerals named preferred bidder for a deposit put at $60bn+; rivals may appeal.",
+         src="BBC &#183; Reuters"),
     dict(n=11, reg="OC", place="NUKU&#8216;ALOFA", beat="OCEANIA", art=art_tonga, lon=-175.20, lat=-21.14,
          h="Tonga declares 27-day drought emergency",
          p="Nationwide El Ni&#241;o order covers all islands and territorial waters.",
          src="RNZ Pacific"),
     dict(n=12, reg="AP", place="SEOUL", beat="JUSTICE", art=art_seoul, lon=126.98, lat=37.57,
-         h="Korea top court clears ex-PM Han",
-         p="Supreme Court overturns Han Duck-soo&#8217;s 15-year martial-law conviction.",
-         src="DW"),
+         h="Korea top court voids ex-PM Han verdict",
+         p="9&#8211;3 ruling sends Han Duck-soo&#8217;s martial-law case to retrial; he stays detained.",
+         src="AP &#183; DW"),
     dict(n=13, reg="GL", place="PARIS", beat="ENERGY", art=art_paris, lon=2.35, lat=48.86,
          h="IEA warns datacentre CO2 up 70% by 2030",
-         p="Power demand to double on AI growth and fossil plants; IMF sees 4.7%.",
+         p="AI doubles data-centre power demand; US leans on gas, China on coal.",
          src="Guardian &#183; Reuters"),
 ]
 
 DISPATCHES = [
     # 14-23, left column
-    ("AF", "SUDAN", "UN reports drone strikes killed 1,630 civilians.", "UN News"),
-    ("AF", "SENEGAL", "Faye bypasses MPs on $2.2bn IMF deal.", "Africanews"),
-    ("AF", "SOMALIA", "Mogadishu gives UAE envoy 72 hours to leave.", "Reuters"),
-    ("AF", "PRETORIA", "South Africa holds policy rate at 7.25%.", "SABC"),
-    ("OC", "COOK IS.", "Nassau on alert as Cyclone Xavier slows.", "RNZ"),
-    ("OC", "WELLINGTON", "Court: pay-equity law breached rights.", "RNZ"),
+    ("AF", "SUDAN", "Army jets pound RSF bases in Nyala.", "Sudan Tribune"),
+    ("AF", "SENEGAL", "Faye bypasses MPs with budget decree.", "Africanews"),
+    ("AF", "SOMALIA", "UAE envoy given 72 hours to leave.", "Al Jazeera"),
+    ("AF", "PRETORIA", "Reserve Bank holds at 7.25% in 4&#8211;3 vote.", "IOL"),
+    ("OC", "COOK IS.", "Cat-4 Cyclone Xavier lashes northern atolls.", "RNZ"),
+    ("OC", "WELLINGTON", "High Court: pay-equity law breached rights.", "RNZ"),
     ("OC", "CANBERRA", "Jobless rate hits five-year high of 4.9%.", "ABC"),
-    ("AM", "WASHINGTON", "Senate rejects Iran war-powers curb.", "Al Jazeera"),
-    ("AM", "HAITI", "Port-au-Prince raid kills 34 gang members.", "Al Jazeera"),
-    ("AM", "SACRAMENTO", "California subpoenas Nvidia on China chips.", "BBC"),
+    ("AM", "WASHINGTON", "Senate sinks Iran war curb, 48&#8211;51.", "Guardian"),
+    ("AM", "HAITI", "Police say raid killed 34 gang suspects.", "Al Jazeera"),
+    ("AM", "CALIFORNIA", "AG Bonta subpoenas Nvidia on China.", "CA DOJ"),
     # 24-33, right column
-    ("AM", "BOSTON", "Judge blocks trans-care curbs on HIV funds.", "Reuters"),
-    ("AM", "BOGOT&#193;", "Colombia unions launch nationwide strike.", "Reuters"),
-    ("EU", "COPENHAGEN", "MPs ratify US&#8211;Greenland pact, 109&#8211;0.", "DW"),
-    ("EU", "BRUSSELS", "First AI-driven cyberattack hits EU network.", "DW"),
-    ("EU", "MOSCOW", "Putin vows &#8216;painful&#8217; reply to bridge strikes.", "BBC"),
-    ("AP", "DHAKA", "Yunus home torched before Hasina return.", "DW"),
-    ("AP", "PAKISTAN", "Bus hits LPG tanker: 10 dead, 27 hurt.", "Al Jazeera"),
-    ("AP", "JAKARTA", "Indonesia passes asset-seizure law at last.", "Kompas"),
-    ("ME", "LEBANON", "Israel strikes Hezbollah missile site.", "Al Jazeera"),
-    ("GL", "ATHLETICS", "Jepchirchir banned three years.", "BBC"),
+    ("AM", "BOSTON", "Judge blocks HIV-fund curbs on trans care.", "Guardian"),
+    ("AM", "BOGOT&#193;", "Unions stage nationwide strike over tax bill.", "Al Jazeera"),
+    ("EU", "COPENHAGEN", "MPs ratify US&#8211;Greenland pact, 109&#8211;0.", "Guardian"),
+    ("EU", "BRUSSELS", "Commission confirms AI-driven cyberattack.", "Politico"),
+    ("EU", "KERCH", "Ukraine strike halts Crimea bridge rail traffic.", "Kyiv Post"),
+    ("AP", "S. KOREA", "551,864 sit Suneung; flights grounded.", "Korea Herald"),
+    ("AP", "PAKISTAN", "Bus&#8211;tanker fire kills 10 near Ormara.", "Arab News"),
+    ("AP", "JAKARTA", "Asset-forfeiture law passes after 18 years.", "Kompas"),
+    ("ME", "LEBANON", "Israel says it hit Hezbollah missile site.", "Times of Israel"),
+    ("GL", "ATHLETICS", "Jepchirchir gets three-year EPO ban.", "AIU"),
 ]
 
 NUMBERS = [
-    ("3", "presidents at one table", "AP"),
-    ("9&#8211;6", "World Court genocide vote", "GL"),
-    ("$81bn", "Anthropic record IPO", "AM"),
-    ("300k", "evacuated in Odisha", "AP"),
-    ("109&#8211;0", "Danish Arctic pact vote", "EU"),
-    ("99", "GTA VI Metascore", "GL"),
+    ("3", "presidents<br>at one table", "AP"),
+    ("9&#8211;6", "World Court<br>genocide vote", "GL"),
+    ("$81bn", "Anthropic<br>record IPO", "AM"),
+    ("300k", "evacuated<br>in Odisha", "AP"),
+    ("109&#8211;0", "Danish Arctic<br>pact vote", "EU"),
+    ("99", "GTA VI<br>Metascore", "GL"),
 ]
 
 DATE_CHECK_1 = (
@@ -781,14 +781,14 @@ DATE_CHECK_1 = (
 )
 DATE_CHECK_2 = (
     "<b>Left out as other days&#8217; news &#8212; WED 18 NOV:</b> Takaichi&#8211;Putin talks "
-    "&#183; Mo&#239;se plot verdict &#183; Gaza &#8216;yellow line&#8217; crossing &#183; "
-    "Jeffries 251&#8211;11 &#183; Van Gogh $190.4m &#183; Fed minutes. "
+    "&#183; Mo&#239;se verdict &#183; Gaza &#8216;yellow line&#8217; &#183; Jeffries 251&#8211;11 "
+    "&#183; Van Gogh $190.4m &#183; Fed minutes &#183; Yunus home fire. "
     "<b>FRI 20 NOV:</b> Akvan landfall &#183; UK&#8211;EU summit."
 )
 SOURCES = (
     "Disputed claims attributed, not stated as fact &#183; Original illustrations and Natural Earth "
-    "map drawn in code &#183; Sources: BBC, Reuters, Guardian, DW, Al Jazeera, UN News, ABC, RNZ, "
-    "SABC, Kompas, Africanews, Kyiv Independent, TNIE, France 24, IEA"
+    "map drawn in code &#183; Every item credits its own sources: BBC, Reuters, Guardian, AP, DW, "
+    "Al Jazeera, ABC, RNZ, Kyiv Independent, France 24, Politico, Sudan Tribune and others"
 )
 
 # map badge offsets (px in the 293-wide map) for the thirteen card pins
@@ -871,21 +871,21 @@ body{font-family:Lato,sans-serif;color:#141923;-webkit-font-smoothing:antialiase
  font-style:italic;font-weight:400;font-size:13.3px;line-height:16px;letter-spacing:.05px;color:#9A1B1F;
  white-space:nowrap;overflow:hidden;}
 .mastrule{position:absolute;left:16px;right:16px;top:101px;height:1.5px;background:#2C313A;}
-.regionbar{position:absolute;left:16px;right:16px;top:105px;height:18px;display:flex;background:#EFE8D8;}
-.seg{flex:1 1 0;height:18px;display:flex;align-items:center;justify-content:center;gap:5px;
- border-left:1px solid #C9BFA9;white-space:nowrap;overflow:hidden;}
-.seg:first-child{border-left:none;}
-.seg i{flex:none;width:6px;height:6px;background:var(--fill);}
-.seg .lab{font-weight:700;font-size:7.2px;letter-spacing:.55px;color:#2C313A;line-height:10px;}
-.seg .ct{font-weight:900;font-size:8.8px;color:var(--ink);line-height:10px;}
-.stats{position:absolute;left:16px;right:16px;top:127px;height:32px;display:flex;background:#EFE8D8;
- border-top:1px solid #C9BFA9;border-bottom:1px solid #C9BFA9;}
-.stats .cell{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
- border-left:1px solid #C9BFA9;overflow:hidden;}
+.regionbar{position:absolute;left:16px;right:16px;top:104px;height:20px;display:flex;gap:4px;}
+.seg{flex:1 1 0;height:20px;display:flex;align-items:center;justify-content:center;gap:6px;
+ background:var(--fill);border-radius:3px;white-space:nowrap;overflow:hidden;}
+.seg .lab{font-weight:900;font-size:8.4px;letter-spacing:.7px;color:#FFFFFF;line-height:12px;}
+.seg .ct{font-weight:900;font-size:10px;color:var(--ink);background:#FFFFFF;border-radius:7px;
+ min-width:17px;padding:0 4px;text-align:center;line-height:13px;}
+.stats{position:absolute;left:16px;right:16px;top:127px;height:33px;display:flex;background:#EFE8D8;
+ border-bottom:1px solid #B9AE95;}
+.stats .cell{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;
+ border-left:1px solid #C9BFA9;border-top:3px solid var(--fill);overflow:hidden;}
 .stats .cell:first-child{border-left:none;}
-.stats .v{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:15.5px;
- color:var(--ink);line-height:17px;letter-spacing:-.2px;}
-.stats .k{font-weight:700;font-size:6.8px;letter-spacing:.45px;text-transform:uppercase;color:#4A4438;line-height:9px;}
+.stats .v{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;font-size:20px;
+ color:var(--ink);line-height:22px;letter-spacing:-.3px;}
+.stats .k{font-weight:900;font-size:7.3px;letter-spacing:.4px;text-transform:uppercase;color:#2C313A;
+ line-height:8.8px;white-space:nowrap;}
 .row{position:absolute;left:16px;width:992px;display:grid;}
 .r1{top:165px;height:214px;grid-template-columns:repeat(3,324px);column-gap:10px;}
 .r2{top:387px;height:133px;grid-template-columns:repeat(5,192px);column-gap:8px;}
@@ -916,12 +916,12 @@ body{font-family:Lato,sans-serif;color:#141923;-webkit-font-smoothing:antialiase
 .r2 .kick .sep,.r3 .kick .sep{font-size:7px;}
 .card h2{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:700;color:#141923;
  overflow:hidden;flex:none;}
-.r1 h2{font-size:16.6px;line-height:18.4px;height:36.8px;letter-spacing:-.2px;}
+.r1 h2{font-size:18.4px;line-height:19.6px;height:39.2px;letter-spacing:-.25px;margin-top:1px;}
 .r2 h2,.r3 h2{font-size:11.7px;line-height:12.4px;height:24.8px;letter-spacing:-.1px;}
 .card h2 sub{font-size:.7em;line-height:0;}
 .card p{font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-weight:400;color:#2C313A;
  overflow:hidden;flex:none;}
-.r1 p{margin-top:2px;font-size:9.8px;line-height:12.1px;height:36.3px;}
+.r1 p{margin-top:4px;font-size:10.3px;line-height:12.8px;height:25.6px;}
 .r2 p,.r3 p{margin-top:1px;font-size:8.9px;line-height:10.2px;height:20.4px;}
 .src{margin-top:auto;border-top:1px solid #E2D8C4;display:flex;justify-content:space-between;
  font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-style:italic;white-space:nowrap;
@@ -955,8 +955,8 @@ body{font-family:Lato,sans-serif;color:#141923;-webkit-font-smoothing:antialiase
 .dl:last-child{border-bottom:none;}
 .dl .nb{flex:none;width:16px;height:14px;line-height:14px;text-align:center;font-weight:900;
  font-size:8.6px;color:#FFFFFF;background:var(--ink);border-radius:1px;}
-.dl .pl{flex:none;font-weight:900;font-size:9.0px;letter-spacing:.25px;color:var(--ink);line-height:12px;}
-.dl .tx{flex:1 1 auto;min-width:0;font-weight:400;font-size:9.9px;line-height:12px;letter-spacing:.02px;
+.dl .pl{flex:none;font-weight:900;font-size:9.4px;letter-spacing:.25px;color:var(--ink);line-height:12px;}
+.dl .tx{flex:1 1 auto;min-width:0;font-weight:400;font-size:10.3px;line-height:12px;letter-spacing:0;
  color:#141923;white-space:nowrap;overflow:hidden;}
 .dl .so{flex:none;font-family:Liberation Serif,DejaVu Serif,Georgia,serif;font-style:italic;
  font-weight:400;font-size:8.2px;color:#6A6254;line-height:11px;}
@@ -1002,7 +1002,7 @@ def build_html():
     counts = region_counts()
     total = sum(counts.values())
     segs = "".join(
-        '<div class="seg" data-region="%s" data-count="%d" style="%s"><i></i>'
+        '<div class="seg" data-region="%s" data-count="%d" style="%s">'
         '<span class="lab">%s</span><span class="ct">%d</span></div>'
         % (k, counts[k], style_vars(k), REGIONS[k][0], counts[k]) for k in ORDER)
     nums = "".join(
