@@ -402,83 +402,165 @@ def art_icj():
 def art_gta():
     W, H = 240, 86
     d = ("<defs>"
-         + lingrad_a("gtS", [("0", "#170433", "1"), (".45", "#6D1B7B", "1"), (".78", "#E9467E", "1"),
-                             ("1", "#FFB16A", "1")])
-         + lingrad_a("gtU", [("0", "#FFF1A8", "1"), (".55", "#FFA25E", "1"), ("1", "#FF4F7B", "1")])
-         + lingrad_a("gtO", [("0", "#5B1466", "1"), ("1", "#13052B", "1")])
-         + radgrad("gtR", [("0", "#FFD58A", ".75"), ("1", "#FF6E7F", "0")], 160, 56, 70)
-         + glow_filter("gtN", 2.4, "#FF3FD8", 3)
-         + glow_filter("gtC", 1.4, "#22C55E")
+         + lingrad_a("gt2S", [("0", "#10032A", "1"), (".3", "#3A0F62", "1"), (".58", "#8B1B7C", "1"),
+                              (".82", "#DE4A7C", "1"), ("1", "#FFB45F", "1")])
+         + lingrad_a("gt2Sea", [("0", "#3A0E56", "1"), (".55", "#210A3A", "1"), ("1", "#0B0220", "1")])
+         + lingrad_a("gt2Road", [("0", "#1C0838", "1"), ("1", "#05010C", "1")])
+         + radgrad("gt2Glow", [("0", "#FFB36B", ".7"), (".5", "#FF4F8B", ".22"), ("1", "#FF4F8B", "0")],
+                   158, 49, 58)
+         + radgrad("gt2Sun", [("0", "#FFF4C2", "1"), (".45", "#FFC15E", "1"), (".8", "#FF6E8A", "1"),
+                              ("1", "#E23E86", "1")], 158, 49, 21)
+         + lingrad_a("gt2Beam", [("0", "#FFF0B8", ".5"), ("1", "#FFF0B8", "0")], x2="1", y2="0")
+         + glow_filter("gt2N", 2.0, "#FF3FD8", 2)
+         + glow_filter("gt2G", 1.1, "#22C55E")
+         + blur_filter("gt2B", 1.4)
+         + '<clipPath id="gt2SunC"><circle cx="158" cy="49" r="21"/></clipPath>'
          + "</defs>")
-    b = d + rect(0, 0, W, 60, "url(#gtS)") + rect(0, 0, W, 60, "url(#gtR)")
-    b += circle(160, 46, 25, "url(#gtU)")
-    for i, y in enumerate((46, 51, 55.5, 59)):
-        b += rect(134, y, 52, 1.2 + i * 0.6, "#C2337E")
-    b += rect(0, 60, W, 26, "url(#gtO)")
-    for i, (y, w) in enumerate(((62, 46), (65, 38), (68.5, 30), (72, 22), (76, 14), (80, 8))):
-        b += rect(160 - w / 2.0, y, w, 1.2, "#FF9E8A", extra=' fill-opacity="%s"' % n(0.8 - i * 0.1))
-    b += rect(0, 59.4, W, 0.9, "#FFC48A", extra=' fill-opacity=".7"')
-    sil = "#10032A"
-    b += palm(202, 86, 52, -8, sil, 1.1) + palm(218, 86, 40, 4, sil, 0.9) + palm(184, 86, 30, -4, sil, 0.7)
-    b += path("M0 86 L0 76 Q30 70 60 74 Q90 78 110 86 Z", sil)
-    b += t(10, 52, "VI", 48, "#FFFFFF", 900, "start", -1,
-           ' stroke="#FF5FE0" stroke-width="1.4" paint-order="stroke" filter="url(#gtN)"')
-    b += rect(80, 8, 38, 34, "#16A34A", 3, "#BBF7D0", 1, ' filter="url(#gtC)"')
-    b += t(99, 28, "99", 20, "#FFFFFF", 900, "middle")
-    b += t(99, 39, "METASCORE", 5.6, "#FFFFFF", 900, "middle", 0.5)
-    b += rect(8, 70, 100, 12, "#000000", 2, extra=' fill-opacity=".55"')
-    b += t(58, 79, "$1.5BN+ PRE-SALES", 7.8, "#FDE68A", 900, "middle", 0.8)
+    b = d + rect(0, 0, W, 62, "url(#gt2S)") + rect(0, 0, W, 62, "url(#gt2Glow)")
+    for x, y in ((18, 9), (40, 15), (66, 7), (96, 12), (132, 6), (196, 9), (222, 15), (232, 6)):
+        b += circle(x, y, 0.7, "#FFFFFF", extra=' fill-opacity=".8"')
+    # retro sun with horizontal cut bands
+    sun = circle(158, 49, 21, "url(#gt2Sun)")
+    bands = "".join(rect(135, y, 46, 1.1 + i * 0.55, "#C22C74", extra=' fill-opacity=".82"')
+                    for i, y in enumerate((42.5, 46.5, 50.5, 54.5)))
+    b += '<g clip-path="url(#gt2SunC)">' + sun + bands + "</g>"
+    for x, y, w, h, a in ((14, 30, 54, 2.4, .26), (52, 22, 40, 1.8, .16), (176, 34, 46, 2.2, .2)):
+        b += rect(x, y, w, h, "#FFB8C8", 1.2, extra=' fill-opacity="%s"' % n(a))
+    # distant deco skyline on the horizon
+    far = "#2A0B4A"
+    for x, w, h in ((2, 13, 12), (16, 10, 19), (27, 16, 9), (45, 9, 16), (57, 13, 11),
+                    (188, 12, 16), (201, 16, 10), (218, 9, 20), (229, 11, 13)):
+        b += rect(x, 56 - h, w, h, far)
+    b += path("M72 56 L72 40 L75 40 L75 33 L78 33 L78 56 Z", "#1B0536")
+    b += path("M84 56 L84 44 L88 38 L92 44 L92 56 Z", "#1B0536")
+    b += line(72, 40, 78, 40, "#FF6FE0", .8, extra=' filter="url(#gt2N)"')
+    b += line(84, 44, 92, 44, "#FF6FE0", .7, extra=' filter="url(#gt2N)"')
+    b += windows(18, 42, 2, 3, 3, 3, 1.2, 1.2, "#FFD27A", 5, .6)
+    b += windows(202, 44, 3, 3, 3, 3, 1.2, 1.2, "#FFD27A", 9, .5)
+    # ocean strip and glitter
+    b += rect(0, 56, W, 7, "url(#gt2Sea)")
+    for i, (w, y) in enumerate(((36, 58), (26, 60), (16, 62))):
+        b += rect(158 - w / 2.0, y, w, 0.9, "#FFC36B", extra=' fill-opacity="%s"' % n(.55 - i * .1))
+    b += line(0, 56, W, 56, "#FF7BE8", .9, extra=' filter="url(#gt2N)"')
+    # boulevard with perspective lane lines
+    b += rect(0, 62, W, 24, "url(#gt2Road)")
+    b += path("M118 62 L94 86 L100 86 L120 62 Z", "#5B1B78", extra=' fill-opacity=".5"')
+    b += path("M124 62 L152 86 L158 86 L126 62 Z", "#5B1B78", extra=' fill-opacity=".5"')
+    b += line(120, 62, 106, 86, "#FF3FD8", 1, extra=' stroke-opacity=".55" filter="url(#gt2N)"')
+    b += line(126, 62, 144, 86, "#FF3FD8", 1, extra=' stroke-opacity=".55" filter="url(#gt2N)"')
+    for x, y, w in ((18, 70, 20), (50, 75, 12), (188, 68, 16), (202, 77, 9), (158, 84, 14)):
+        b += rect(x, y, w, .7, "#FF7BE8", extra=' fill-opacity=".22"')
+    b += palm(26, 86, 54, -5, "#0A0220", .85) + palm(40, 86, 34, 4, "#12042A", .6)
+    b += palm(210, 86, 46, 6, "#0A0220", .8) + palm(224, 86, 30, 3, "#12042A", .55)
+    # sleek sports car on the glowing boulevard
+    b += path("M84 78 L92 73 Q102 70 116 69 L128 65 Q141 61 154 65 L166 69 Q178 71 184 75 L186 78 Z",
+              "#1A0A2E")
+    b += path("M92 73 Q102 70 116 69 L128 65 Q141 61 154 65 L166 69 Q178 71 184 75", "none",
+              "#FF7BE8", 1.1, ' stroke-opacity=".9" filter="url(#gt2N)"')
+    b += path("M126 65 Q140 61.5 153 65 L158 68.5 L121 68.5 Z", "#4C1D95")
+    b += line(124, 66, 151, 66, "#7DD3FC", .9, extra=' stroke-opacity=".7"')
+    b += circle(110, 78, 5.4, "#03010A", "#5B21B6", 1.1)
+    b += circle(110, 78, 2.3, "#A855F7", extra=' fill-opacity=".9"')
+    b += circle(164, 78, 5.4, "#03010A", "#5B21B6", 1.1)
+    b += circle(164, 78, 2.3, "#A855F7", extra=' fill-opacity=".9"')
+    b += rect(85, 72.5, 6, 1.8, "#FF2D55", 1, extra=' filter="url(#gt2N)"')
+    b += poly([(183, 73.5), (206, 69), (212, 78), (184, 77.5)], "url(#gt2Beam)")
+    b += circle(183, 74.6, 1.4, "#FFF3C4", extra=' filter="url(#gt2N)"')
+    b += '<ellipse cx="136" cy="83" rx="48" ry="2.6" fill="#FF3FD8" opacity=".45" filter="url(#gt2B)"/>'
+    # badges
+    b += rect(7, 5, 98, 13, "#12041F", 2, "#FDE68A", .8)
+    b += t(56, 14.3, "$1.5BN+ PRE-SALES", 7.6, "#FDE68A", 900, "middle", .7)
+    b += rect(178, 5, 58, 30, "#15803D", 3, "#BBF7D0", 1, ' filter="url(#gt2G)"')
+    b += t(207, 20.5, "99", 17.5, "#FFFFFF", 900, "middle", -0.3)
+    b += t(207, 32.6, "METASCORE", 5.2, "#DCFCE7", 900, "middle", .8)
     return svg(W, H, b)
 
 
 def art_cop():
     W, H = 240, 86
     d = ("<defs>"
-         + lingrad_a("cpL", [("0", "#3F3F46", "1"), ("1", "#A8A29E", "1")])
-         + lingrad_a("cpR", [("0", "#0284C7", "1"), (".7", "#7DD3FC", "1"), ("1", "#D9F99D", "1")])
-         + radgrad("cpU", [("0", "#FEF08A", "1"), (".4", "#FDE047", ".6"), ("1", "#FDE047", "0")], 214, 28, 22)
-         + lingrad_a("cpP", [("0", "#1E3A8A", "1"), ("1", "#3B82F6", "1")], x2="1", y2="1")
-         + '<clipPath id="cpCL"><path d="M0 0 L132 0 L104 86 L0 86 Z"/></clipPath>'
-         + '<clipPath id="cpCR"><path d="M132 0 L240 0 L240 86 L104 86 Z"/></clipPath>'
-         + blur_filter("cpB", 1.6)
+         + lingrad_a("cp2S", [("0", "#0B0A2A", "1"), (".3", "#24124E", "1"), (".58", "#5B2A6E", "1"),
+                              (".78", "#C25B5A", "1"), ("1", "#F2A65A", "1")])
+         + lingrad_a("cp2Sea", [("0", "#2A1C50", "1"), (".45", "#123A54", "1"), ("1", "#081C2E", "1")])
+         + radgrad("cp2Glow", [("0", "#FFB86B", ".42"), (".55", "#F97316", ".12"), ("1", "#F97316", "0")],
+                   120, 58, 86)
+         + lingrad_a("cp2Dome", [("0", "#152A5E", "1"), (".55", "#2C5C96", "1"), ("1", "#5FA6C8", "1")])
+         + lingrad_a("cp2Sol", [("0", "#0EA5E9", "1"), (".6", "#38BDF8", "1"), ("1", "#A5F3FC", "1")], x2="1", y2="1")
+         + lingrad_a("cp2Enter", [("0", "#FDE68A", ".95"), ("1", "#F59E0B", ".5")])
+         + glow_filter("cp2G", 1.5, "#5EEAD4")
+         + glow_filter("cp2A", 1.6, "#FDE68A")
+         + blur_filter("cp2B", 1.7)
          + "</defs>")
-    # fossil side
-    L = rect(0, 0, W, H, "url(#cpL)")
-    for cx, cy, r, a in ((22, 20, 9, .55), (34, 12, 11, .5), (52, 9, 9, .45), (60, 22, 7, .4), (14, 30, 6, .5)):
-        L += circle(cx, cy, r, "#E7E5E4", extra=' fill-opacity="%s" filter="url(#cpB)"' % n(a))
-    L += rect(16, 30, 9, 44, "#1C1917") + rect(30, 24, 9, 50, "#1C1917")
-    L += rect(16, 34, 9, 2.4, "#B91C1C") + rect(30, 28, 9, 2.4, "#B91C1C")
-    der = "#111111"
-    L += path("M66 74 L76 26 L86 74", "none", der, 2.2) + line(70, 56, 82, 56, der, 1.4) + line(72, 44, 80, 44, der, 1.4)
-    L += line(68, 64, 84, 46, der, 1) + line(84, 64, 68, 46, der, 1) + rect(74, 22, 4, 5, der)
-    L += path("M88 66 L100 56 L104 60 L92 70 Z", der) + rect(94, 62, 3, 12, der)
-    L += rect(0, 74, W, 12, "#292524")
-    b = d + '<g clip-path="url(#cpCL)">' + L + "</g>"
-    # clean-power side
-    R = rect(0, 0, W, H, "url(#cpR)") + rect(0, 0, W, H, "url(#cpU)") + circle(214, 28, 8, "#FEF9C3")
-    R += path("M100 86 L100 66 Q150 52 190 62 Q216 68 240 60 L240 86 Z", "#15803D")
-    R += path("M100 86 L100 74 Q160 64 240 74 L240 86 Z", "#166534")
-    for x, y0, s in ((150, 24, 1.0), (184, 32, 0.8), (124, 40, 0.62)):
-        top = y0
-        R += path("M%s %s L%s %s L%s %s L%s %s Z" % (n(x - 1.4 * s), 70, n(x - 0.6 * s), n(top),
-                  n(x + 0.6 * s), n(top), n(x + 1.4 * s), 70), "#F8FAFC")
+    b = d + rect(0, 0, W, 64, "url(#cp2S)") + rect(0, 0, W, 64, "url(#cp2Glow)")
+    for x, y in ((10, 9), (32, 16), (58, 7), (86, 12), (150, 8), (174, 16), (196, 22)):
+        b += circle(x, y, 0.7, "#FFFFFF", extra=' fill-opacity=".75"')
+    b += path("M230 4 A8 8 0 1 0 230 20 A6.2 6.2 0 1 1 230 4 Z", "#FDE68A", extra=' filter="url(#cp2A)"')
+    # Mediterranean mountains behind the bay
+    b += path("M0 54 L18 46 L34 50 L52 42 L70 48 L90 44 L112 50 L132 46 L154 51 L174 45 L196 50 "
+              "L214 47 L240 52 L240 58 L0 58 Z", "#2B1B4E", extra=' fill-opacity=".9"')
+    b += rect(0, 54, W, 10, "url(#cp2Sea)")
+    b += line(0, 54, W, 54, "#F2B36A", .7, extra=' stroke-opacity=".7"')
+    for x, w in ((94, 18), (108, 26), (124, 14), (166, 22), (180, 12)):
+        b += rect(x, 56.5, w, .7, "#FFC98A", extra=' fill-opacity=".38"')
+    # COP31 conference dome on the Antalya shore
+    b += path("M92 62 A26 26 0 0 1 144 62 Z", "url(#cp2Dome)", "#8FD3E8", .7)
+    for k in range(1, 6):
+        ang = math.pi + k * math.pi / 6
+        b += line(118, 62, 118 + 26 * math.cos(ang), 62 + 26 * math.sin(ang), "#8FD3E8", .45,
+                  extra=' stroke-opacity=".32"')
+    for rr in (9, 17):
+        b += path("M%s 62 A%s %s 0 0 1 %s 62" % (n(118 - rr), n(rr), n(rr), n(118 + rr)),
+                  "none", "#8FD3E8", .4, ' stroke-opacity=".28"')
+    b += rect(106, 55, 24, 7, "url(#cp2Enter)", 1, extra=' filter="url(#cp2A)"')
+    b += line(118, 55, 118, 62, "#5B3A12", .7)
+    b += line(118, 36, 118, 30, "#E2E8F0", .8) + poly([(118, 30), (125, 32.4), (118, 34.8)], "#FCA5A5")
+    b += line(104, 62, 132, 62, "#FDE68A", .9, extra=' stroke-opacity=".55"')
+    b += rect(0, 62, W, 24, "#080A1A")
+    b += path("M0 74 Q60 68 120 72 Q180 76 240 70 L240 86 L0 86 Z", "#0D1226")
+    b += path("M0 74 Q60 68 120 72 Q180 76 240 70", "none", "#F2B36A", .7, ' stroke-opacity=".35"')
+    # fossil left: derricks fading into shadow
+    def derrick(x, base, h, a):
+        topx = x + h * 0.16
+        s = '<g opacity="%s">' % n(a)
+        s += line(x - h * .26, base, topx, base - h, "#6B4A32", 1.3)
+        s += line(x + h * .26, base, topx, base - h, "#6B4A32", 1.3)
+        s += line(topx, base - h, topx, base - h - 3.4, "#6B4A32", 1)
+        for f in (.32, .56, .78):
+            half = h * .26 * (1 - f)
+            s += line(topx - half, base - h * f, topx + half, base - h * f, "#6B4A32", .7)
+        s += line(x - h * .26, base, topx + h * .26, base - h, "#6B4A32", .5)
+        s += line(x + h * .26, base, topx - h * .26, base - h, "#6B4A32", .5)
+        return s + "</g>"
+    b += derrick(16, 70, 32, .8) + derrick(40, 70, 24, .5) + derrick(60, 70, 17, .3)
+    for cx, cy, r, a in ((14, 28, 7, .32), (8, 20, 8, .24), (24, 22, 6, .2), (34, 16, 7, .16)):
+        b += circle(cx, cy, r, "#A8A29E", extra=' fill-opacity="%s" filter="url(#cp2B)"' % n(a))
+    b += '<ellipse cx="30" cy="70" rx="28" ry="2.4" fill="#1C1917" opacity=".8"/>'
+    b += circle(8, 66, 1.3, "#F59E0B", extra=' fill-opacity=".6" filter="url(#cp2B)"')
+    # clean right: ridge, turbines and a solar field
+    b += path("M144 86 L144 72 Q168 64 192 68 Q216 72 240 64 L240 86 Z", "#0F5132")
+    b += path("M144 86 L144 76 Q176 68 204 72 Q224 75 240 70 L240 86 Z", "#166534")
+    def turbine(x, base, h, s):
+        top = base - h
+        out = line(x, base, x, top, "#E0F2FE", 1.2 * s)
         for ang in (-90, 30, 150):
             a = math.radians(ang)
-            R += line(x, top, x + 15 * s * math.cos(a), top + 15 * s * math.sin(a), "#F8FAFC", 2.2 * s,
-                      extra=' stroke-linecap="round"')
-        R += circle(x, top, 1.8 * s, "#CBD5E1")
-    for i in range(4):
-        x = 160 + i * 18
-        R += poly([(x, 66), (x + 15, 66), (x + 12, 74), (x - 3, 74)], "url(#cpP)", "#E0F2FE", 0.6)
-    b += '<g clip-path="url(#cpCR)">' + R + "</g>"
-    b += line(132, 0, 104, 86, "#FFFFFF", 2)
-    # crimson strike-out over the fossil side
-    b += line(12, 22, 98, 70, "#DC2626", 5, extra=' stroke-linecap="round" stroke-opacity=".92"')
-    b += line(98, 22, 12, 70, "#DC2626", 5, extra=' stroke-linecap="round" stroke-opacity=".92"')
-    b += rect(54, 4, 132, 14, "#0B1220", 7, "#FFFFFF", 0.8)
-    b += t(120, 13.8, "COP31 ANTALYA &#183; DRAFT 2", 7.4, "#FFFFFF", 900, "middle", 1)
-    b += t(8, 82, "OIL &#183; GAS &#183; COAL", 7.4, "#FCA5A5", 900, "start", 1)
-    b += t(234, 82, "35% ELECTRIC BY 2035", 7.4, "#FFFFFF", 900, "end", 0.6)
+            out += line(x, top, x + h * .42 * math.cos(a), top + h * .42 * math.sin(a), "#E0F2FE", 1.1 * s,
+                        extra=' stroke-linecap="round"')
+        return out + circle(x, top, 1.4 * s, "#5EEAD4", extra=' filter="url(#cp2G)"')
+    b += turbine(170, 72, 30, 1) + turbine(198, 71, 24, .85) + turbine(222, 72, 19, .7)
+    for r, (y, bw) in enumerate(((74, 24), (78, 31), (82, 37))):
+        for k in range(3):
+            x0 = 150 + k * 26 - r * 3
+            b += poly([(x0, y), (x0 + bw, y), (x0 + bw - 3, y + 3.4), (x0 - 3, y + 3.4)],
+                      "url(#cp2Sol)", "#67E8F9", .4)
+            b += line(x0 + 1, y + 1.5, x0 + bw - 2, y + 1.5, "#0C4A6E", .35,
+                      extra=' stroke-opacity=".55"')
+    b += rect(54, 4, 132, 13, "#080D1F", 6.5, "#F8FAFC", .7)
+    b += t(120, 13.5, "COP31 ANTALYA &#183; DRAFT 2", 7.2, "#F8FAFC", 900, "middle", 1)
+    b += rect(148, 24.8, 88, 9.4, "#07121F", 4, extra=' fill-opacity=".74"')
+    b += t(234, 32.2, "35% ELECTRIC BY 2035", 7, "#BBF7D0", 900, "end", .4)
+    b += t(8, 83, "OIL &#183; GAS &#183; COAL", 7.2, "#FCA5A5", 900, "start", .9)
+    b += t(8, 72.5, "PHASE-OUT", 5, "#E7B7B7", 900, "start", 1.2)
     return svg(W, H, b)
 
 
@@ -606,101 +688,170 @@ def art_kyiv():
 def art_berlin():
     W, H = 190, 64
     d = ("<defs>"
-         + radgrad("bG", [("0", "#2D5BD8", "1"), (".6", "#163A9A", "1"), ("1", "#0A1E5C", "1")], 120, 36, 110)
-         + radgrad("bH", [("0", "#FDE68A", ".5"), ("1", "#FDE68A", "0")], 128, 34, 46)
-         + lingrad_a("bS", [("0", "#FFFFFF", "1"), ("1", "#C7D2E4", "1")])
-         + glow_filter("bGl", 1.2, "#FDE047")
+         + lingrad_a("b2S", [("0", "#070D24", "1"), (".42", "#14224F", "1"), (".68", "#4B3A6E", "1"),
+                             (".85", "#B0655A", "1"), ("1", "#F2B36A", "1")])
+         + radgrad("b2H", [("0", "#FFC46B", ".55"), (".45", "#F59E0B", ".16"), ("1", "#F59E0B", "0")],
+                   95, 50, 78)
+         + lingrad_a("b2Stone", [("0", "#FFF3C9", "1"), (".45", "#D9B36A", "1"), ("1", "#8A6432", "1")])
+         + lingrad_a("b2StoneV", [("0", "#7A5A2E", "1"), (".45", "#D9B36A", "1"), ("1", "#FFE9B8", "1")])
+         + lingrad_a("b2Beam", [("0", "#FFF3C4", ".24"), ("1", "#FFF3C4", "0")], x2="0", y2="1")
+         + lingrad_a("b2Plaza", [("0", "#131B34", "1"), ("1", "#050914", "1")])
+         + glow_filter("b2G", 1.4, "#FDE68A")
          + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#bG)") + rect(0, 0, W, H, "url(#bH)")
-    stars = ""
-    for i in range(12):
-        a = -math.pi / 2 + i * math.pi / 6
-        stars += path(star_d(34 + 20 * math.cos(a), 34 + 20 * math.sin(a), 3.2), "#FACC15")
-    b += '<g filter="url(#bGl)">' + stars + "</g>"
-    g = "url(#bS)"
-    # Brandenburg Gate: stylobate, six Doric columns, entablature, attic, quadriga
-    x0, w = 78, 100
-    b += rect(x0 - 2, 54, w + 4, 4, g) + rect(x0, 32, w, 5, g) + rect(x0 + 12, 26, w - 24, 6, g)
+    b = d + rect(0, 0, W, 58, "url(#b2S)") + rect(0, 0, W, 58, "url(#b2H)")
+    for x, y in ((8, 8), (24, 15), (42, 6), (60, 12), (78, 7), (142, 12), (158, 6), (176, 16), (186, 8)):
+        b += circle(x, y, 0.65, "#FFFFFF", extra=' fill-opacity=".8"')
+    # subtle EU star arc in the western sky
+    for i in range(9):
+        ang = math.radians(200 + i * 17.5)
+        b += path(star_d(30 + 22 * math.cos(ang), 32 + 22 * math.sin(ang), 2.1), "#FACC15",
+                  extra=' fill-opacity=".92"')
+    # diplomatic spotlight beams
+    b += poly([(72, 28), (46, 0), (60, 0)], "url(#b2Beam)")
+    b += poly([(118, 28), (144, 0), (130, 0)], "url(#b2Beam)")
+    # Brandenburg Gate: steps, stylobate, six lit columns, attic and quadriga
+    b += rect(46, 58, 98, 2.2, "#0A0F22") + rect(50, 55.6, 90, 2.6, "#141A30")
+    b += rect(54, 51.4, 82, 4.2, "url(#b2Stone)")
+    stone = "url(#b2StoneV)"
     for i in range(6):
-        b += rect(x0 + 3 + i * (w - 10) / 5.0, 37, 4.2, 17, g)
-    b += rect(x0, 31, w, 1, "#94A3B8") + rect(x0, 37, w, 0.8, "#94A3B8")
-    q = "#E2E8F0"
-    cx = x0 + w / 2.0
-    b += path("M%s 26 L%s 20 L%s 19 L%s 14 L%s 19 L%s 19 L%s 14 L%s 19 L%s 20 L%s 26 Z" % tuple(
-        n(cx + v) for v in (-12, -10, -6, -4, -2, 2, 4, 6, 10, 12)), q)
-    b += rect(cx - 0.8, 8, 1.6, 7, q) + circle(cx, 7.4, 1.7, q)
-    b += rect(0, 58, W, 6, "#071340")
-    b += t(34, 37, "EU", 8.4, "#FDE68A", 900, "middle", 1)
-    b += t(184, 12, "BERLIN", 8, "#FFFFFF", 900, "end", 1.8)
-    b += t(6, 12, "E3", 7, "#FDE68A", 900, "start", 1)
+        x = 58 + i * 13.4
+        b += rect(x, 33, 4.8, 18.4, stone)
+        b += rect(x, 33, 1.2, 18.4, "#6B5430", extra=' fill-opacity=".7"')
+        b += rect(x + 3.6, 33, 1.2, 18.4, "#FFE8B0", extra=' fill-opacity=".8"')
+        b += rect(x - 0.8, 31.4, 6.4, 1.8, "url(#b2Stone)")
+        b += rect(x - 0.8, 49.6, 6.4, 1.8, "url(#b2Stone)")
+    b += rect(56, 26.8, 78, 4.8, "url(#b2Stone)")
+    for x in range(58, 134, 5):
+        b += line(x, 27.4, x, 31.2, "#8A6432", .45, extra=' stroke-opacity=".55"')
+    b += rect(62, 20.6, 66, 6.2, "url(#b2Stone)")
+    b += rect(60, 19.2, 70, 1.5, "#FFE9B8")
+    b += line(56, 26.8, 134, 26.8, "#FFE9B8", .6, extra=' stroke-opacity=".7"')
+    q = "#D9A94E"
+    b += path("M82 20 Q83 14.5 86 13.5 Q88 10.5 90 13.5 Q92 15.5 94 13.5 Q96 10.5 98 13.5 "
+              "Q100 15.5 102 13.5 Q104 10.5 106 13.5 L108 20 Z", q)
+    b += rect(84, 18.2, 22, 2.4, q)
+    b += circle(88, 21.2, 1.5, q, "#FDE68A", .35) + circle(102, 21.2, 1.5, q, "#FDE68A", .35)
+    b += line(95, 13, 95, 5.6, q, 1) + circle(95, 4.8, 1.5, q)
+    b += path("M95 4.8 L102 3.2 L95 1.9 Z", q)
+    # warm uplighting and column shadows on the plaza
+    for i in range(6):
+        x = 58 + i * 13.4
+        b += path("M%s 51.4 L%s 51.4 L%s 58 L%s 58 Z" % (n(x + 0.6), n(x + 4.2), n(x + 8.6), n(x - 1.8)),
+                  "#050914", extra=' fill-opacity=".55"')
+    b += rect(0, 58, W, 6, "url(#b2Plaza)")
+    for x, w in ((58, 22), (86, 30), (118, 18)):
+        b += rect(x, 59.6, w, .8, "#FFD98A", extra=' fill-opacity=".35"')
+    b += circle(12, 50, 2.2, "#FDE68A", extra=' filter="url(#b2G)"')
+    b += rect(11.4, 50, 1.2, 8, "#3A2A14")
+    b += circle(178, 52, 1.8, "#FDE68A", extra=' filter="url(#b2G)"')
+    b += rect(177.5, 52, 1, 6, "#3A2A14")
+    b += t(184, 10, "BERLIN", 7.4, "#FFFFFF", 900, "end", 1.7)
+    b += rect(154, 12.2, 30, .5, "#FDE68A", extra=' fill-opacity=".65"')
     return svg(W, H, b)
 
 
 def art_kenya():
     W, H = 190, 64
     d = ("<defs>"
-         + lingrad_a("keS", [("0", "#F59E0B", "1"), (".55", "#FCD34D", "1"), ("1", "#FEF3C7", "1")])
-         + lingrad_a("keO", [("0", "#0E7490", "1"), ("1", "#155E75", "1")])
-         + lingrad_a("keH", [("0", "#3F8F3A", "1"), ("1", "#1F5A23", "1")])
-         + radgrad("keM", [("0", "#FDE68A", ".9"), (".5", "#FBBF24", ".35"), ("1", "#FBBF24", "0")], 156, 26, 34)
-         + lingrad_a("keT", [("0", "#1F2937", "1"), ("1", "#0B1220", "1")])
+         + lingrad_a("ke2S", [("0", "#2A0A04", "1"), (".35", "#6B2109", "1"), (".62", "#B45309", "1"),
+                              (".82", "#E89A3C", "1"), ("1", "#F8D48A", "1")])
+         + radgrad("ke2Glow", [("0", "#FFE9B0", ".8"), (".45", "#FB923C", ".3"), ("1", "#FB923C", "0")],
+                   36, 28, 40)
+         + lingrad_a("ke2Sea", [("0", "#0E7490", "1"), ("1", "#155E75", "1")])
+         + lingrad_a("ke2Metal", [("0", "#FFF3C4", "1"), (".3", "#F4C46A", "1"), (".55", "#B45309", "1"),
+                                  (".78", "#FDE68A", "1"), ("1", "#92400E", "1")], x2="1", y2="1")
+         + lingrad_a("ke2Gold", [("0", "#FFF7D6", "1"), (".5", "#FBBF24", "1"), ("1", "#F59E0B", "1")])
+         + glow_filter("ke2G", 1.6, "#FBBF24")
          + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#keS)") + circle(34, 16, 7, "#FFF7D6")
-    b += rect(108, 40, 82, 24, "url(#keO)")
-    for x, y, w in ((116, 46, 16), (140, 50, 22), (166, 44, 14), (126, 56, 18), (160, 58, 20)):
-        b += rect(x, y, w, 0.8, "#A5F3FC", extra=' fill-opacity=".7"')
-    # Mrima Hill: forested dome above red laterite earth
-    b += path("M0 64 L0 44 Q30 18 64 22 Q96 26 124 50 L132 64 Z", "url(#keH)")
-    for x, y, r in ((22, 34, 5), (34, 27, 6), (48, 23, 6), (62, 24, 6), (76, 27, 6), (90, 32, 5), (102, 38, 5),
-                    (40, 36, 5), (60, 34, 6), (80, 38, 5), (14, 42, 4)):
-        b += circle(x, y, r, "#4FA346", extra=' fill-opacity=".75"')
-    b += path("M0 64 L0 54 Q40 44 80 50 Q108 54 128 64 Z", "#9A3412")
-    b += path("M0 64 L0 59 Q50 52 100 60 L104 64 Z", "#7C2D12")
-    for x, y in ((40, 57), (58, 59), (74, 58)):
-        b += path("M%s %s L%s %s L%s %s L%s %s Z" % (x, y - 3, x + 3, y, x, y + 2.6, x - 3, y), "#FDE68A")
-    # acacia
-    b += rect(14, 40, 1.6, 14, "#3B2410") + path("M2 41 Q15 33 28 41 Q15 38 2 41 Z", "#2F3B12")
-    # glowing element tile and value chip
-    b += rect(118, 0, 72, 52, "url(#keM)")
-    b += rect(136, 4, 40, 42, "url(#keT)", 3, "#FBBF24", 1.6)
-    b += t(140, 12, "41", 7, "#FDE68A", 900)
-    b += t(156, 32, "Nb", 18, "#FBBF24", 900, "middle")
-    b += t(156, 42.5, "NIOBIUM", 4.8, "#FDE68A", 900, "middle", 0.7)
-    b += rect(132, 47, 48, 12, "#047857", 2, "#A7F3D0", 0.8)
-    b += t(156, 56, "$60BN+", 8.4, "#FFFFFF", 900, "middle", 0.5)
-    b += t(4, 11, "MRIMA HILL", 7.4, "#5B2A06", 900, "start", 1.2)
+    b = d + rect(0, 0, W, 46, "url(#ke2S)") + rect(0, 0, W, 46, "url(#ke2Glow)")
+    b += circle(36, 28, 10, "#FFF3C4")
+    b += circle(36, 28, 14, "none", "#FDE68A", .5, extra=' stroke-opacity=".35"')
+    for x, y, w, a in ((6, 12, 34, .3), (48, 20, 28, .22), (12, 36, 46, .26), (118, 14, 40, .2)):
+        b += rect(x, y, w, 1.4, "#FFD9A0", extra=' fill-opacity="%s"' % n(a))
+    for x, y in ((72, 8), (96, 16), (140, 9), (166, 20), (180, 6)):
+        b += circle(x, y, 0.6, "#FFFFFF", extra=' fill-opacity=".7"')
+    # Indian Ocean sliver and layered coastal ridges
+    b += rect(0, 38, W, 6, "url(#ke2Sea)")
+    for x, w in ((8, 24), (46, 18), (100, 30), (150, 20)):
+        b += rect(x, 40 + (x % 3) * .6, w, .7, "#A5F3FC", extra=' fill-opacity=".45"')
+    b += path("M0 44 L26 35 L48 39 L70 32 L94 38 L118 30 L146 36 L170 32 L190 37 L190 64 L0 64 Z",
+              "#6B3A1F", extra=' fill-opacity=".62"')
+    b += path("M0 64 L0 51 Q24 34 54 31 Q82 28 104 38 Q122 46 142 45 L190 49 L190 64 Z", "#4A2410")
+    for d2, a in (("M18 49 Q38 39 58 36", .45), ("M12 55 Q36 44 62 40 Q84 37 102 43", .36),
+                  ("M6 60 Q34 50 64 45 Q88 42 110 47", .28)):
+        b += path(d2, "none", "#C07A3A", .7, ' stroke-opacity="%s"' % n(a))
+    for x, y, s in ((34, 36, .9), (56, 33, .8), (78, 35, .7), (96, 40, .65)):
+        b += line(x, y + 1, x, y + 5, "#1C0C04", .7)
+        b += path("M%s %s Q%s %s %s %s Q%s %s %s %s Z" % (x - 5 * s, y + 1, x - 2 * s, y - 2 * s,
+                  x, y - 1.2 * s, x + 2 * s, y - 2 * s, x + 5 * s, y + 1), "#1C0C04")
+    b += path("M0 64 L0 56 Q40 50 80 55 Q120 60 160 54 L190 57 L190 64 Z", "#7C2D12")
+    b += path("M0 56 Q40 50 80 55 Q120 60 160 54 L190 57", "none", "#B45309", .8,
+              ' stroke-opacity=".7"')
+    for x, y, w in ((8, 61, 7), (24, 58, 5), (46, 62, 8), (74, 59, 6), (102, 62, 7), (126, 58, 5),
+                    (150, 61, 8), (172, 58, 6)):
+        b += line(x, y, x + w, y + .8, "#3B1A06", .7, extra=' stroke-opacity=".5"')
+    # metallic critical-minerals badge
+    b += rect(131, 4, 54, 45, "url(#ke2Metal)", 3, "#FFF7D6", 1, ' filter="url(#ke2G)"')
+    b += rect(134, 7, 48, 39, "#170C05", 2, "#FBBF24", .8)
+    b += t(138, 13.2, "41", 6.4, "#FDE68A", 900)
+    b += t(158, 30.5, "Nb", 16, "url(#ke2Gold)", 900, "middle")
+    b += t(158, 42, "NIOBIUM", 4.8, "#FDE68A", 900, "middle", .8)
+    b += rect(128, 49, 60, 11, "#047857", 2, "#A7F3D0", 1)
+    b += t(158, 57.4, "$60BN+", 8.4, "#FFFFFF", 900, "middle", .5)
+    b += t(5, 11, "MRIMA HILL", 7.2, "#FFE3B0", 900, "start", 1.2)
+    b += rect(4.4, 13.2, 48, .6, "#FDE68A", extra=' fill-opacity=".55"')
     return svg(W, H, b)
 
 
 def art_tonga():
     W, H = 190, 64
     d = ("<defs>"
-         + lingrad_a("toS", [("0", "#EA580C", "1"), (".55", "#FB923C", "1"), ("1", "#FDE68A", "1")])
-         + radgrad("toU", [("0", "#FFF7D6", "1"), (".35", "#FDE047", ".7"), ("1", "#FDE047", "0")], 150, 20, 30)
-         + lingrad_a("toE", [("0", "#B45309", "1"), ("1", "#78350F", "1")])
+         + lingrad_a("to2S", [("0", "#3B0710", "1"), (".3", "#7F1D1D", "1"), (".55", "#C2410C", "1"),
+                              (".78", "#F59E0B", "1"), ("1", "#FDE68A", "1")])
+         + radgrad("to2Glow", [("0", "#FFE9A8", ".9"), (".42", "#FB923C", ".3"), ("1", "#FB923C", "0")],
+                   142, 24, 42)
+         + lingrad_a("to2Sea", [("0", "#0F766E", "1"), (".5", "#0E7490", "1"), ("1", "#082F49", "1")])
+         + lingrad_a("to2Earth", [("0", "#D97706", "1"), (".55", "#9A3412", "1"), ("1", "#7C2D12", "1")])
+         + glow_filter("to2G", 1.4, "#FDE68A")
          + "</defs>")
-    b = d + rect(0, 0, W, H, "url(#toS)") + rect(0, 0, W, H, "url(#toU)") + circle(150, 20, 9, "#FFFBEB")
-    b += rect(0, 38, W, 4, "#2B7A9B", extra=' fill-opacity=".75"')
-    b += path("M120 38 Q130 34 142 38 Z", "#7C2D12")
-    b += rect(0, 42, W, 22, "url(#toE)")
-    for dd in ("M4 48 L20 52 L30 47 L46 54 L52 50", "M60 46 L74 53 L88 49 L98 56 L114 51",
-               "M126 48 L140 54 L156 49 L172 56 L188 50", "M20 60 L36 57 L50 62", "M100 62 L116 58 L132 63",
-               "M150 60 L164 58 L176 63", "M30 47 L34 42", "M88 49 L92 43", "M156 49 L160 43"):
-        b += path(dd, "none", "#3B1A06", 1.3, ' stroke-linejoin="round"')
-    b += path("M36 44 Q30 30 38 14", "none", "#3B1A06", 3)
-    for dx, dy in ((-15, 12), (-11, 6), (13, 11), (10, 5), (2, 13)):
-        b += path("M38 14 Q%s %s %s %s" % (38 + dx * 0.6, 14 + dy - 6, 38 + dx, 14 + dy + 8), "none", "#6B4A1A", 2)
-    # near-empty water tank with gauge
-    # near-empty rainwater tank: corrugated cylinder with a sight glass
-    b += rect(80, 20, 28, 25, "#94A3B8") + '<ellipse cx="94" cy="20" rx="14" ry="3" fill="#CBD5E1"/>'
-    b += '<ellipse cx="94" cy="45" rx="14" ry="2.6" fill="#64748B"/>'
-    for x in range(83, 107, 4):
-        b += line(x, 21, x, 45, "#CBD5E1", 0.8, extra=' stroke-opacity=".7"')
-    b += rect(99, 23, 4, 20, "#1E293B", 1) + rect(99, 39.5, 4, 3.5, "#38BDF8", 0.6)
-    b += rect(76, 44, 36, 2, "#3B1A06")
-    b += rect(4, 4, 74, 13, "#3B0D02", 2, extra=' fill-opacity=".85"')
-    b += t(41, 13.4, "27-DAY EMERGENCY", 6.6, "#FFFFFF", 900, "middle", 0.4)
-    b += t(186, 61, "EL NI&#209;O DROUGHT", 6.4, "#FEF3C7", 900, "end", 0.8)
+    b = d + rect(0, 0, W, 48, "url(#to2S)") + rect(0, 0, W, 48, "url(#to2Glow)")
+    b += circle(142, 24, 11, "#FFF3C4", extra=' filter="url(#to2G)"')
+    b += circle(142, 24, 15, "none", "#FDE68A", .5, extra=' stroke-opacity=".3"')
+    for y, a in ((17, .5), (21.5, .42), (26, .34)):
+        b += rect(124, y, 36, .8, "#FCA5A5", extra=' fill-opacity="%s"' % n(a))
+    for x, y in ((20, 9), (64, 13), (98, 7), (118, 18), (176, 10), (184, 22)):
+        b += circle(x, y, 0.6, "#FFFFFF", extra=' fill-opacity=".72"')
+    for x, y in ((72, 19), (82, 15), (92, 20)):
+        b += path("M%s %s Q%s %s %s %s" % (x, y, x + 2.4, y + 1.6, x + 4.8, y), "none", "#3B1A06", .6,
+                  ' stroke-opacity=".55"')
+    # Pacific horizon and heat shimmer
+    b += rect(0, 38, W, 10, "url(#to2Sea)")
+    b += line(0, 38, W, 38, "#A5F3FC", .7, extra=' stroke-opacity=".65"')
+    for x, w, y in ((6, 30, 41), (44, 22, 43), (90, 34, 40.5), (138, 26, 43), (166, 20, 41.5)):
+        b += path("M%s %s Q%s %s %s %s" % (x, y, x + w * .5, y - 1.8, x + w, y), "none", "#67E8F9", .7,
+                  ' stroke-opacity=".55"')
+    b += path("M170 38 Q176 35 184 38 Z", "#0F172A", extra=' fill-opacity=".75"')
+    # scorched, cracked coastline
+    b += path("M0 64 L0 48 Q26 45 52 49 Q78 53 106 48 Q134 43 160 48 Q176 51 190 47 L190 64 Z",
+              "url(#to2Earth)")
+    b += path("M0 48 Q26 45 52 49 Q78 53 106 48 Q134 43 160 48 Q176 51 190 47", "none", "#FBBF24", .8,
+              ' stroke-opacity=".5"')
+    cracks = ("M2 52 L14 55 L22 53 L32 58 L42 55 L54 61 L66 58", "M28 49 L34 54 L32 59 L40 63",
+              "M52 50 L58 56 L54 61", "M74 50 L82 54 L78 60 L86 63", "M96 49 L104 55 L100 61",
+              "M116 48 L124 53 L120 59 L128 63", "M140 47 L148 51 L144 57 L152 62",
+              "M160 49 L168 54 L164 60", "M176 48 L182 52 L180 58", "M8 59 L18 57 L26 62",
+              "M64 52 L70 57 L68 62", "M132 50 L138 55 L134 61")
+    for d2 in cracks:
+        b += path(d2, "none", "#3B1A06", 1, ' stroke-linejoin="round" stroke-linecap="round"')
+        b += path(d2, "none", "#F59E0B", .45, ' stroke-linejoin="round" stroke-linecap="round" '
+                                               'stroke-opacity=".35" transform="translate(0.35 0.45)"')
+    # silhouetted palms
+    b += palm(24, 64, 36, -5, "#240704", .9) + palm(46, 64, 27, 4, "#2A0A04", .7)
+    b += palm(104, 64, 22, -3, "#3B0D02", .55)
+    b += rect(4, 4, 88, 12, "#450A0A", 2, "#FCA5A5", .7)
+    b += t(48, 13, "27-DAY EMERGENCY", 6.5, "#FFFFFF", 900, "middle", .5)
+    b += rect(0, 56, W, 8, "#2A0A04", extra=' fill-opacity=".3"')
+    b += t(186, 61.5, "EL NI&#209;O DROUGHT", 6.2, "#FEF3C7", 900, "end", .9)
     return svg(W, H, b)
 
 
@@ -822,7 +973,7 @@ DISPATCHES = [
     # Africa
     ("AF", "MOGADISHU", "Somalia gives UAE envoy 72 hours to leave", "REUTERS"),
     ("AF", "DAKAR", "Faye bypasses parliament to save $2.2bn IMF deal", "AFRICANEWS"),
-    ("AF", "ZIMBABWE", "250,000 landmines destroyed since 2013", "AFRICANEWS"),
+    ("AF", "SUDAN", "UN: drone strikes kill 1,630 civilians", "UN NEWS &#183; REUTERS"),
     ("AF", "UGANDA", "48 Bududa landslide survivors take case to the UN", "BBC"),
     ("AF", "KIGALI", "Rwanda: US &#8216;unbalanced&#8217; on DR Congo peace deal", "FRANCE 24"),
     # Middle East
@@ -832,12 +983,12 @@ DISPATCHES = [
     ("ME", "LEBANON", "Israel strikes Hezbollah missile site in Bekaa", "DPA"),
     ("ME", "IRAN / US", "Trump: &#8216;no rush&#8217; on Iran, will decide in new year", "REUTERS"),
     # Oceania
-    ("OC", "COOK ISLANDS", "Emergency for Nassau as Cyclone Xavier nears", "RNZ"),
+    ("OC", "COOK ISLANDS", "Nassau on alert as Cyclone Xavier slows", "RNZ"),
     ("OC", "WELLINGTON", "Court: pay-equity law breached women&#8217;s rights", "RNZ"),
     ("OC", "NZ / AUSTRALIA", "US sanctions Comancheros, first for an NZ gang", "RNZ"),
     ("OC", "NORTHLAND", "Sperm whales die in Ninety Mile Beach stranding", "RNZ"),
     # Global / science
-    ("GL", "ATHLETICS", "World marathon champion Jepchirchir banned 3 years", "BBC"),
+    ("GL", "MARKETS", "Dow falls 1,100 points as AI sell-off deepens", "CNBC &#183; ABC"),
     ("GL", "IMF", "Georgieva: AI and energy shocks lift inflation to 4.7%", "REUTERS"),
     ("GL", "UNFPA", "1 in 4 women can&#8217;t refuse sex in marriage", "GUARDIAN"),
 ]
@@ -852,10 +1003,8 @@ NUMBERS = [
 ]
 
 DATE_CHECK = (
-    "Excluded as <b>WED 18</b>: Takaichi&#8211;Putin talks &#183; Moïse plot verdict &#183; Venezuela TPS ruling "
-    "&#183; Pew religion study &#183; Egypt&#8211;IMF deal &#183; Gaza &#8216;yellow line&#8217; crossing &#183; "
-    "Jeffries 251&#8211;11 &#183; Van Gogh $190.4m. As <b>FRI 20</b>: Speakman quits &#183; UK&#8211;EU summit "
-    "&#183; Akvan landfall."
+    "Excluded as <b>WED 18</b>: Mo&#239;se plot verdict &#183; Fed rate minutes "
+    "&#183; Jeffries 251&#8211;11 &#183; Van Gogh $190.4m."
 )
 
 SOURCES = (
