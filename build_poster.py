@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the 1024x1024 visual broadsheet for Thursday 19 November 2026 (entry.png), v11.
+"""Build the 1024x1024 visual broadsheet for Thursday 19 November 2026 (entry.png), v14.
 
 A classic archival editorial broadsheet: warm cream newsprint, a giant Title-Case
 serif masthead, an italic crimson deck, a seven-pill colour-coded region bar, a
@@ -12,7 +12,7 @@ deliberately left out.
 The page is rendered in headless Chromium at 1x and 2x device scale. The same
 pass runs a strict DOM geometry audit (exact size, 33/33 story census, 13 map
 badges, exact region sums, no overflow, no overlaps, no clipped text, headline
-and summary line limits, >=15px dispatch slack, SVG ink inside every viewBox
+and summary line limits, >=20px dispatch slack, SVG ink inside every viewBox
 and an ink-contrast floor); the build fails on any issue. Text comes from native
 1x Playwright text; the 2x Lanczos pixels are pasted into all fourteen
 integer-aligned illustration and map boxes. The result is a 4:4:4 baseline JPEG.
@@ -31,15 +31,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 ENTRY = ROOT / "entry.png"
 WORLD_PATH = ROOT / "world_land_110m.svgpath"
-HTML_PATH = Path("/tmp/world_news_canvas_v11.html")
-RAW_1X = Path("/tmp/world_news_canvas_v11_1x.png")
-RAW_2X = Path("/tmp/world_news_canvas_v11_2x.png")
-PREVIEW_300 = Path("/tmp/news_v11_300.png")
-PREVIEW_512 = Path("/tmp/news_v11_512.png")
+HTML_PATH = Path("/tmp/world_news_canvas_v14.html")
+RAW_1X = Path("/tmp/world_news_canvas_v14_1x.png")
+RAW_2X = Path("/tmp/world_news_canvas_v14_2x.png")
+PREVIEW_300 = Path("/tmp/news_v14_300.png")
+PREVIEW_512 = Path("/tmp/news_v14_512.png")
 CHROME = "/usr/bin/google-chrome"
 
-JPEG_QUALITIES = (91, 90, 89)
-JPEG_MAX = 480 * 1000
+JPEG_QUALITIES = (90, 89, 88, 87)
+JPEG_MAX = 420 * 1000
 HARD_LIMIT = 1048576
 
 SERIF = "Liberation Serif, DejaVu Serif, Georgia, serif"
@@ -305,20 +305,21 @@ def art_icj():
 
 
 ANT_SERIES = [
-    (20, 83.0), (30, 83.0), (36, 111.5), (48, 109.6), (60, 110.4), (72, 107.8), (86, 108.9),
-    (98, 106.1), (110, 107.3), (124, 104.6), (136, 105.7), (150, 103.1), (162, 104.0),
-    (176, 101.6), (188, 102.7), (202, 100.4), (214, 101.2), (228, 99.1), (240, 100.0),
-    (252, 98.2), (264, 98.9), (276, 97.5), (288, 98.3), (297, 96.9), (304, 97.17),
+    (20, 83.0), (92, 83.0), (96, 111.5), (110, 108.0), (122, 109.4), (136, 106.2),
+    (148, 107.6), (162, 104.4), (174, 105.7), (188, 102.2), (200, 103.5), (214, 100.6),
+    (226, 101.9), (240, 99.2), (252, 100.4), (266, 97.8), (278, 99.0), (290, 96.7),
+    (298, 97.8), (304, 97.17),
 ]
 
 
 def art_anthropic():
-    """New York: an emerald trading terminal - $83 IPO, $111.50 open, $97.17 close."""
+    """New York: an emerald terminal - $83 IPO, an $111.50 open pop and a $97.17 close."""
     W, H = 322, 102
 
     def py(p):
         return 90 - (p - 80) / (118 - 80) * 72
 
+    base = py(83)
     d = ("<defs>"
          + lingrad("anB", [("0", "#061A14", "1"), ("1", "#0C3325", "1")])
          + lingrad("anA", [("0", "#34D399", ".55"), ("1", "#34D399", ".04")])
@@ -327,17 +328,21 @@ def art_anthropic():
     for p in (85, 90, 95, 100, 105, 110):
         b += line(16, py(p), 306, py(p), "#1E5C44", .7, ' stroke-opacity=".75"')
     dl = "M" + " L".join("%s %s" % (n(x), n(py(p))) for x, p in ANT_SERIES)
-    b += path(dl + " L304 92 L20 92 Z", "url(#anA)")
-    b += line(16, py(83), 306, py(83), "#F5C542", 1.2, "4 3", ' stroke-opacity=".9"')
+    b += path(dl + " L304 %s L96 %s Z" % (n(base), n(base)), "url(#anA)")
+    b += line(16, base, 306, base, "#F5C542", 1.2, "4 3", ' stroke-opacity=".9"')
+    b += line(94, base - 2, 94, py(111.5) + 5, "#34D399", 3.2,
+              extra=' stroke-opacity=".55" stroke-linecap="round"')
     b += path(dl, "none", "#065F46", 4.0, ' stroke-linejoin="round" stroke-linecap="round"')
     b += path(dl, "none", "#6EE7B7", 2.2, ' stroke-linejoin="round" stroke-linecap="round"')
-    for x, p in ((20, 83), (36, 111.5), (304, 97.17)):
+    for x, p in ((20, 83), (96, 111.5), (304, 97.17)):
         b += circle(x, py(p), 4.4, "#052E22", "#6EE7B7", 1.8)
         b += circle(x, py(p), 1.8, "#D1FAE5")
-    b += t(16, 12, "ANT &#183; NASDAQ", 9.2, "#ECFDF5", 900, "start", 1.0)
-    b += t(44, 24.5, "OPEN $111.50", 8.2, "#D1FAE5", 900, "start", .3)
-    b += t(24, 99, "IPO $83", 8.2, "#FDE68A", 900, "start", .2)
-    b += t(304, 73, "CLOSE $97.17 &#183; +17%", 8.2, "#ECFDF5", 900, "end", .2)
+    b += t(16, 14, "ANT &#183; NASDAQ", 9.2, "#ECFDF5", 900, "start", 1.0)
+    b += t(16, 28, "+17% DAY ONE", 7.8, "#6EE7B7", 900, "start", .5)
+    b += line(104, 22, 98.4, 28.6, "#6EE7B7", .8)
+    b += t(106, 26, "OPEN $111.50", 8.2, "#D1FAE5", 900, "start", .3)
+    b += t(18, 96, "IPO $83", 8.2, "#FDE68A", 900, "start", .2)
+    b += t(304, 72, "CLOSE $97.17", 8.2, "#ECFDF5", 900, "end", .2)
     b += rect(236, 2, 78, 32, "#047857", 2, "#D1FAE5", 1.0)
     b += t(275, 20, "$81BN", 12.4, "#FFFFFF", 900, "middle", -.2)
     b += t(275, 29.5, "RECORD IPO", 4.4, "#D1FAE5", 900, "middle", .7)
@@ -552,41 +557,24 @@ def art_berlin():
 
 
 def art_kenya():
-    """Mrima Hill: Kenyan flag, a mine headframe, a niobium crystal and a $60BN+ estimate badge."""
+    """Mrima Hill: bold emerald/terracotta ridges, a crystal and a $60BN+ estimate badge."""
     W, H = 190, 58
     d = ("<defs>"
          + lingrad("knS", [("0", "#0F3B35", "1"), (".6", "#2F7D5B", "1"), ("1", "#E8B76B", "1")])
          + lingrad("knX", [("0", "#5EEAD4", "1"), ("1", "#0E7490", "1")])
          + "</defs>")
     b = d + rect(0, 0, W, H, "url(#knS)")
+    b += circle(168, 10, 6, "#FFE7A0", extra=' fill-opacity=".45"')
     b += path("M0 36 Q30 24 58 32 Q90 41 118 29 Q148 18 190 33 L190 58 L0 58 Z", "#3E8E5A")
     b += path("M0 43 Q36 33 72 41 Q108 50 144 37 Q168 30 190 40 L190 58 L0 58 Z", "#1F5E3C")
     b += path("M0 51 Q44 43 92 49 Q140 56 190 47 L190 58 L0 58 Z", "#B4552F")
     b += path("M0 55 Q44 48 92 53 Q140 58 190 52 L190 58 L0 58 Z", "#8A3A1C")
-    # Kenyan flag on a pole
-    b += rect(6, 21, 1.6, 33, "#E8DCC0")
-    fx, fy, fw = 8, 22, 32
-    for y0, hh, col in ((0, 5.6, "#111111"), (5.6, 1.0, "#FFFFFF"), (6.6, 5.8, "#BB0000"),
-                        (12.4, 1.0, "#FFFFFF"), (13.4, 5.6, "#006B3F")):
-        b += rect(fx, fy + y0, fw, hh, col)
-    b += rect(fx, fy, fw, 19, "none", 0, "#FDFBF6", .6)
-    b += line(fx + 11, fy + 2, fx + 21, fy + 17, "#FFFFFF", .9) + line(fx + 21, fy + 2, fx + 11, fy + 17, "#FFFFFF", .9)
-    b += '<ellipse cx="%s" cy="%s" rx="3.4" ry="7.2" fill="#BB0000" stroke="#111111" stroke-width=".9"/>' % (
-        n(fx + 16), n(fy + 9.5))
-    b += line(fx + 16, fy + 3.5, fx + 16, fy + 15.5, "#FFFFFF", .8)
-    # mine headframe
-    hx = 98
-    b += line(hx - 9, 46, hx, 14, "#1A1F2B", 2.0) + line(hx + 9, 46, hx, 14, "#1A1F2B", 2.0)
-    b += line(hx - 6.5, 37, hx + 6.5, 37, "#1A1F2B", 1.2) + line(hx - 4, 27, hx + 4, 27, "#1A1F2B", 1.2)
-    b += line(hx - 6.5, 37, hx + 4, 27, "#1A1F2B", .9) + line(hx + 6.5, 37, hx - 4, 27, "#1A1F2B", .9)
-    b += circle(hx, 14, 4.2, "none", "#1A1F2B", 1.6) + circle(hx, 14, 1.2, "#1A1F2B")
-    b += line(hx + 4, 14, hx + 16, 46, "#1A1F2B", .8)
-    b += rect(hx - 12, 45, 32, 4, "#1A1F2B", 1)
-    # niobium crystal
-    b += poly([(62, 17), (77, 28), (72, 49), (54, 49), (47, 28)], "url(#knX)", "#062E38", 1.2)
-    b += poly([(62, 17), (62, 49), (54, 49), (47, 28)], "#99F6E4", "#062E38", .8)
-    b += poly([(62, 17), (77, 28), (62, 33)], "#22D3EE", "#062E38", .7)
-    b += line(62, 17, 62, 49, "#ECFEFF", 1.0, ' stroke-opacity=".9"')
+    # crystal
+    b += poly([(52, 15), (68, 27), (62, 49), (44, 49), (36, 27)], "url(#knX)", "#062E38", 1.2)
+    b += poly([(52, 15), (52, 49), (44, 49), (36, 27)], "#99F6E4", "#062E38", .8)
+    b += poly([(52, 15), (68, 27), (52, 33)], "#22D3EE", "#062E38", .7)
+    b += line(52, 15, 52, 49, "#ECFEFF", 1.0, ' stroke-opacity=".9"')
+    b += poly([(76, 29), (86, 36), (82, 49), (72, 49), (68, 36)], "#0E7490", "#062E38", 1.0)
     b += rect(4, 4, 72, 13, "#0B2A26", 2, "#FDFBF6", .5)
     b += t(40, 13.6, "MRIMA HILL", 6.8, "#FDFBF6", 900, "middle", .9)
     b += rect(116, 4, 70, 30, "#9A1B1F", 2, "#FDFBF6", 1.0)
@@ -664,37 +652,30 @@ def art_seoul():
 
 
 def art_paris():
-    """Paris/IEA: a gold Eiffel Tower beside five separated rising server-rack bars."""
+    """Paris/IEA: a bold red-on-charcoal server-rack energy chart and a padded badge."""
     W, H = 190, 58
     d = ("<defs>"
          + lingrad("prS", [("0", "#12161C", "1"), ("1", "#2A303A", "1")])
          + lingrad("prBar", [("0", "#F05252", "1"), ("1", "#B91C1C", "1")])
-         + lingrad("prE", [("0", "#FDE68A", "1"), ("1", "#C99A2E", "1")])
          + "</defs>")
     b = d + rect(0, 0, W, H, "url(#prS)")
-    # Eiffel Tower
-    b += path("M7 53 L15 33 L17.6 19 L19.4 6 L20.6 6 L22.4 19 L25 33 L33 53 L28.2 53 Q20 41 11.8 53 Z",
-              "url(#prE)", "#6B4E12", .6)
-    b += rect(19.2, 2.5, 1.6, 4, "#FDE68A")
-    b += rect(13, 32, 14, 2.4, "#FDE68A", .5, "#6B4E12", .5)
-    b += rect(16.4, 18.4, 7.2, 2, "#FDE68A", .5, "#6B4E12", .5)
-    b += line(15.6, 34.4, 22.6, 46, "#6B4E12", .5) + line(24.4, 34.4, 17.4, 46, "#6B4E12", .5)
-    b += line(18, 20.4, 21.6, 31.6, "#6B4E12", .45) + line(22, 20.4, 18.4, 31.6, "#6B4E12", .45)
-    b += line(40, 50, 114, 50, "#C9D1D9", 1.4)
-    bars = ((43, 8), (57, 16), (71, 25), (85, 34), (99, 44))
-    for x, h in bars:
+    b += line(10, 50, 108, 50, "#C9D1D9", 1.4)
+    bars = ((14, 8), (32, 16), (50, 25), (68, 34), (86, 44))
+    for i, (x, h) in enumerate(bars):
         y = 50 - h
-        b += rect(x, y, 11, h, "url(#prBar)", 1, "#080B0F", 1.0)
-        b += rect(x, y, 11, 3.2, "#1A1F2B", 1)
+        b += rect(x, y, 13, h, "url(#prBar)", 1, "#080B0F", 1.0)
+        b += rect(x, y, 13, 3.4, "#1A1F2B", 1)
         for yy in range(y + 7, 49, 6):
-            b += line(x + 2, yy, x + 9, yy, "#F5C542", .7, ' stroke-opacity=".9"')
-    b += path("M47 40 L61 32 L75 23 L89 14 L104 4.5", "none", "#F5C542", 1.6,
+            b += line(x + 2, yy, x + 11, yy, "#F5C542", .7, ' stroke-opacity=".9"')
+        b += circle(x + 10.2, y + 5.2, .9, "#FDE68A")
+    b += path("M18 46 L34 38 L52 29 L70 20 L96 8", "none", "#F5C542", 1.8,
               ' stroke-linecap="round" stroke-dasharray="3 2"')
-    b += t(48.5, 56.4, "2026", 5.2, "#E5E7EB", 900, "middle", .3)
-    b += t(104.5, 56.4, "2030", 5.2, "#E5E7EB", 900, "middle", .3)
-    b += rect(118, 4, 68, 24, "#B91C1C", 2, "#FDFBF6", 1.1)
-    b += t(152, 20, "+70% CO&#8322;", 9.4, "#FFFFFF", 900, "middle", -.1)
-    b += t(152, 37, "IEA &#183; DATA CENTRES", 5.0, "#E5E7EB", 700, "middle", .4)
+    b += poly([(97, 7), (87, 8), (92, 15)], "#F5C542")
+    b += t(21, 56, "2026", 5.2, "#E5E7EB", 900, "middle", .3)
+    b += t(92, 56, "2030", 5.2, "#E5E7EB", 900, "middle", .3)
+    b += rect(114, 4, 72, 24, "#B91C1C", 2, "#FDFBF6", 1.1)
+    b += t(150, 20, "+70% CO&#8322;", 9.4, "#FFFFFF", 900, "middle", -.1)
+    b += t(150, 36, "IEA &#183; DATA CENTRES", 5.0, "#E5E7EB", 700, "middle", .4)
     return svg(W, H, b)
 
 
@@ -780,7 +761,7 @@ DISPATCHES = [
     ("EU", "BRUSSELS", "Commission confirms AI-driven cyberattack.", "Politico"),
     ("EU", "KERCH", "Ukraine strike halts Crimea bridge rail traffic.", "Kyiv Post"),
     ("AP", "S. KOREA", "551,864 sit Suneung; flights grounded.", "Korea Herald"),
-    ("ME", "HORMUZ", "Iran says two supertankers hit mines.", "Al-Monitor"),
+    ("GL", "IMF / APEC", "Georgieva: AI boom may force rate hikes.", "Guardian"),
     ("AP", "JAKARTA", "Asset-forfeiture law passes after 18 years.", "Kompas"),
     ("ME", "LEBANON", "Israel says it hit Hezbollah missile site.", "Times of Israel"),
     ("GL", "ATHLETICS", "Jepchirchir gets three-year EPO ban.", "AIU"),
@@ -1129,7 +1110,7 @@ AUDIT_JS = r"""() => {
     const tr = document.createRange(); tr.selectNodeContents(tx);
     const textR = tr.getBoundingClientRect(), boxR = R(tx);
     const slack = boxR.right - textR.right;
-    if (slack < 15) add('dispatch slack ' + d.dataset.story + ' ' + slack.toFixed(1));
+    if (slack < 20) add('dispatch slack ' + d.dataset.story + ' ' + slack.toFixed(1));
     if (textR.left < boxR.left - 0.5) add('dispatch text left ' + d.dataset.story);
     if (R(so).left - R(pl).right < 2) add('dispatch source touches place ' + d.dataset.story);
     out.notes.push(d.dataset.story + ' slack ' + Math.round(slack));
